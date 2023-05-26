@@ -16,17 +16,15 @@ namespace OSWMontiorService
 
         private Config config;
 
-#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         public Worker(ILogger<Worker> logger)
-#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
             this.logger = logger;
+            this.config = Config.Get();
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             logger.LogInformation("Starting OSW Monitoring Service: {time}", DateTime.Now);
-            config = Config.Get();
 
             while (!stoppingToken.IsCancellationRequested)
             {

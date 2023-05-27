@@ -5,35 +5,22 @@ namespace OSWMontiorService
 {
     public class AccessDB
     {
-        private static bool TableExists(Logger<Worker> logger, Sensor sensor)
+        public static void AddAll(ILogger<Worker> logger)
         {
-            string tableName = sensor.IP.Replace(".", "");
+            Config config = Config.Get();
 
-            using (OleDbConnection db = new OleDbConnection(@"Provider=Microsoft.ACE.OLEDB.16.0; Data Source = C:\Users\monroett\Desktop\OSWSensors.accdb"))
+            foreach (Sensor sensor in config.Sensors)
             {
-                try
+                if (sensor.Skip)
                 {
-                    db.Open();
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError("Failed to open Database file: {time}", DateTime.Now);
-                    logger.LogError(ex.Message, DateTime.Now);
-                    return false;
+                    continue;
                 }
 
-                DataTable schema = db.GetOleDbSchemaTable(OleDbSchemaGuid.Tables, new object[] { null, null, null, "TABLE" });
-
-                if (schema.Rows.OfType<DataRow>().Any(r => r.ItemArray[2].ToString().ToLower() == tableName.ToLower()))
-                {
-                    return true;
-                }
+                AddEntry(logger, sensor);
             }
-
-            return false;
         }
 
-        public static void AddEntry(Logger<Worker> logger, Sensor sensor)
+        public static void AddEntry(ILogger<Worker> logger, Sensor sensor)
         {
             if (!TableExists(logger, sensor))
             {
@@ -66,15 +53,38 @@ namespace OSWMontiorService
                 command.ExecuteNonQuery();
                 db.Close();
             }
+
         }
 
-        private static DateTime GetDateTime(DateTime d)
+        private static bool TableExists(ILogger<Worker> logger, Sensor sensor)
         {
-            // REMOVES MILLISECONDS. WORKAROUND FOR ERROR 'Data type mismatch in criteria expression'
-            return new DateTime(d.Year, d.Month, d.Day, d.Hour, d.Minute, d.Second);
+            string tableName = sensor.IP.Replace(".", "");
+
+            using (OleDbConnection db = new OleDbConnection(@"Provider=Microsoft.ACE.OLEDB.16.0; Data Source = C:\Users\monroett\Desktop\OSWSensors.accdb"))
+            {
+                try
+                {
+                    db.Open();
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError("Failed to open Database file: {time}", DateTime.Now);
+                    logger.LogError(ex.Message, DateTime.Now);
+                    return false;
+                }
+
+                DataTable schema = db.GetOleDbSchemaTable(OleDbSchemaGuid.Tables, new object[] { null, null, null, "TABLE" });
+
+                if (schema.Rows.OfType<DataRow>().Any(r => r.ItemArray[2].ToString().ToLower() == tableName.ToLower()))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
-        private static void CreateTable(Logger<Worker> logger, Sensor sensor)
+        private static void CreateTable(ILogger<Worker> logger, Sensor sensor)
         {
             string tableName = sensor.IP.Replace(".", "");
 
@@ -96,6 +106,12 @@ namespace OSWMontiorService
                 command.ExecuteNonQuery();
                 db.Close();
             }
+        }
+
+        private static DateTime GetDateTime(DateTime d)
+        {
+            // REMOVES MILLISECONDS. WORKAROUND FOR ERROR 'Data type mismatch in criteria expression'
+            return new DateTime(d.Year, d.Month, d.Day, d.Hour, d.Minute, d.Second);
         }
     }
 }

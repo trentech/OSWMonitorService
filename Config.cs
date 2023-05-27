@@ -1,10 +1,4 @@
 ﻿using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using static System.Environment;
 
 namespace OSWMontiorService
@@ -53,14 +47,10 @@ namespace OSWMontiorService
             }
             else
             {
-#pragma warning disable CS8600 // Converting null literal or possible null value to non-nullable type.
                 config = JsonConvert.DeserializeObject<Config>(File.ReadAllText(CONFIG));
-#pragma warning restore CS8600 // Converting null literal or possible null value to non-nullable type.
             }
 
-#pragma warning disable CS8603 // Possible null reference return.
             return config;
-#pragma warning restore CS8603 // Possible null reference return.
         }
 
         public void Save()

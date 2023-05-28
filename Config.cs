@@ -3,16 +3,43 @@ using static System.Environment;
 
 namespace OSWMontiorService
 {
+    public class Mail
+    {
+        [JsonProperty]
+        public string STMP { get; set; }
+        [JsonProperty]
+        public int Port { get; set; }
+        [JsonProperty]
+        public bool SSL { get; set; }
+        [JsonProperty]
+        public string From { get; set; }
+        [JsonProperty]
+        public List<string> Recipients { get; set; }
+
+        public Mail() 
+        {
+            STMP = "smtp.gmail.com";
+            Port = 25;
+            SSL = false;
+            From = "example@email.com";
+            Recipients = new List<string>() { "test1@example.com", "test2@example.com" };
+        }
+    }
 
     public class Config
     {
-        [JsonProperty("Sensors")]
+        [JsonProperty]
         public List<Sensor> Sensors { get; set; }
 
         [JsonProperty("Path")]
         public string Destination { get; set; }
-        [JsonProperty("Delay")]
+        [JsonProperty]
+        public string DataType { get; set; }
+        [JsonProperty]
         public int Delay { get; set; }
+        [JsonProperty]
+        public Mail Email { get; set; }
+
         [JsonIgnore]
         public static string PATH = Path.Combine(GetFolderPath(SpecialFolder.CommonApplicationData), "OSW Monitoring");
         [JsonIgnore]
@@ -22,7 +49,9 @@ namespace OSWMontiorService
         {
             Sensors = new List<Sensor>();
             Destination = PATH;
+            DataType = "Excel";
             Delay = 10;
+            Email = new Mail();
         }
 
         public static Config Get()

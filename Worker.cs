@@ -1,4 +1,5 @@
 using HtmlAgilityPack;
+using Microsoft.CodeAnalysis;
 using System.Net;
 using System.Net.Mail;
 
@@ -30,7 +31,7 @@ namespace OSWMontiorService
                     if (!sensor.Skip)
                     {
                         logger.LogInformation("Getting sensor data on device " + sensor.IP + ": {time}", DateTime.Now);
-                        GetSensor(sensor.Name, sensor.IP);
+                        config.Sensors.Add(GetSensor(sensor.Name, sensor.IP));
                     }
                     else
                     {
@@ -38,14 +39,25 @@ namespace OSWMontiorService
                     }
                 }
 
-                Excel.AddAll(logger);
-             // AccessDB.AddAll(logger);
+                if (config.DataType == "Excel")
+                {
+                    new Excel(logger, config).AddAll();
+                }
+                else if (config.DataType == "Access")
+                {
+                    new Access(logger, config).AddAll();
+                }
+                else if (config.DataType == "MySQL")
+                {
+                    // NEED CONFIG OPTIONS FOR NULL VALUES
+                    new MySQL(logger, config, null, null, null, null).AddAll();
+                }
 
                 await Task.Delay(1000 * 60 * config.Delay, stoppingToken);
             }
         }
 
-        private void GetSensor(string name, string ip)
+        private Sensor GetSensor(string name, string ip)
         {
             Sensor sensor = new Sensor(name, ip);
             sensor.Skip = false;
@@ -56,19 +68,30 @@ namespace OSWMontiorService
             {
                 logger.LogError("Failed to get sensor data on device " + ip + ": {time}", DateTime.Now);
 
-                // "arvosgroup-com01c.mail.protection.outlook.com"
-                SmtpClient smtpClient = new SmtpClient("10.164.123.206") 
+                Mail mail = new Mail();
+
+                SmtpClient smtpClient = new SmtpClient(mail.STMP) 
                 {
-                    Port = 25,
-                    EnableSsl = false,
+                    Port = mail.Port,
+                    EnableSsl = mail.SSL,
                 };
 
-                // MAKE THIS CONFIGURABLE
-                smtpClient.Send("IT.US@ljungstrom.com", "terrence.monroe@ljungstrom.com", "OSW Sensor Offline", "[" + sensor.Name + " : " + sensor.IP + "] Sensor Offline");
+                MailMessage message = new MailMessage();
+                message.From = new MailAddress(mail.From);
+
+                foreach(string address in mail.Recipients)
+                {
+                    message.To.Add(new MailAddress(address));
+                }
+
+                message.Subject = "OSW Sensor Offline";
+                message.Body = "[" + sensor.Name + " : " + sensor.IP + "] Sensor Offline";
+
+            //    smtpClient.Send(message);
 
                 sensor.IsOffline = true;
-                config.Sensors.Add(sensor);
-                return;
+
+                return sensor;
             }
 
             HtmlWeb web = new HtmlWeb();
@@ -95,7 +118,7 @@ namespace OSWMontiorService
             string recordUnformatted = lines[4].Substring(2).Split(" ")[1];
             sensor.IsRecording = recordUnformatted.Equals("ON") ? true : false;
 
-            config.Sensors.Add(sensor);
+            return sensor;
         }
 
         private bool IsOnline(string url)

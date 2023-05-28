@@ -9,11 +9,17 @@ namespace OSWMontiorService
 {
     public class Excel
     {
+        Config config;
+        ILogger<Worker> logger;
 
-        public static void AddAll(ILogger<Worker> logger)
+        public Excel(ILogger<Worker> logger, Config config)
         {
-            Config config = Config.Get();
+            this.logger = logger;
+            this.config = config;
+        }
 
+        public void AddAll()
+        {
             string tempFile = Path.Combine(Config.PATH, "temp.xlsx");
 
             if (!File.Exists(Path.Combine(config.Destination, "OSW Sensors.xlsx")))
@@ -57,10 +63,10 @@ namespace OSWMontiorService
                 stream.Close();
             }
 
-            CopyDataToPath(logger, tempFile, config.Destination);
+            CopyDataToPath(tempFile, config.Destination);
         }
 
-        public static void AddEntry(XSSFWorkbook workbook, Sensor sensor)
+        public void AddEntry(XSSFWorkbook workbook, Sensor sensor)
         {
             ISheet sheet = workbook.GetSheet(sensor.IP);
 
@@ -102,7 +108,7 @@ namespace OSWMontiorService
             }
         }
 
-        private static void CreateWorkSheet(XSSFWorkbook workbook, Sensor sensor)
+        private void CreateWorkSheet(XSSFWorkbook workbook, Sensor sensor)
         {
             ISheet sheet = workbook.CreateSheet(sensor.IP);
             sheet.DefaultColumnWidth = 15;
@@ -160,7 +166,7 @@ namespace OSWMontiorService
             cell.SetCellValue("Time");
         }
 
-        private static void CreateSpreadSheet(string path, Config config)
+        private void CreateSpreadSheet(string path, Config config)
         {
             using (FileStream stream = new FileStream(path, FileMode.Create, FileAccess.Write))
             {
@@ -176,7 +182,7 @@ namespace OSWMontiorService
             }
         }
 
-        private static async void CopyDataToPath(ILogger<Worker> logger, string source, string destination)
+        private async void CopyDataToPath(string source, string destination)
         {
             Stopwatch stopWatch = new Stopwatch();
             stopWatch.Start();
@@ -197,16 +203,29 @@ namespace OSWMontiorService
 
                         if (timeSpan.TotalHours >= 1)
                         {
-                            // "arvosgroup-com01c.mail.protection.outlook.com"
-                            SmtpClient smtpClient = new SmtpClient("10.164.123.206")
+                            Mail mail = new Mail();
+
+                            SmtpClient smtpClient = new SmtpClient(mail.STMP)
                             {
-                                Port = 25,
-                                EnableSsl = false,
+                                Port = mail.Port,
+                                EnableSsl = mail.SSL,
                             };
 
-                            smtpClient.Send("IT.US@ljungstrom.com", "terrence.monroe@ljungstrom.com", "OSW Sensor File Locked", "[" + file + "] File has been locked from editing for over an hour.");
+                            MailMessage message = new MailMessage();
+                            message.From = new MailAddress(mail.From);
+
+                            foreach (string address in mail.Recipients)
+                            {
+                                message.To.Add(new MailAddress(address));
+                            }
+
+                            message.Subject = "OSW Sensor File Locked";
+                            message.Body = "[" + file + "] File has been locked from editing for over an hour.";
+
+                            smtpClient.Send(message);
 
                             logger.LogError("[" + file + "]: File is locked and cannot be written to: {time}", DateTime.Now);
+
                             return;
                         }
                     }
@@ -219,7 +238,7 @@ namespace OSWMontiorService
             });
         }
 
-        private static bool IsFileLocked(string path)
+        private bool IsFileLocked(string path)
         {
             try
             {

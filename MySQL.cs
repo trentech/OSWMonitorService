@@ -1,14 +1,28 @@
-﻿using System.Data;
-using System.Data.OleDb;
+﻿using MySql.Data.MySqlClient;
 
 namespace OSWMontiorService
 {
-    public class AccessDB
+    public class MySQL
     {
-        public static void AddAll(ILogger<Worker> logger)
-        {
-            Config config = Config.Get();
+        Config config;
+        ILogger<Worker> logger;
+        string server;
+        string db;
+        string username;
+        string password;
 
+        public MySQL(ILogger<Worker> logger, Config config, string server, string db, string username, string password)
+        {
+            this.logger = logger;
+            this.config = config;
+            this.server = server;
+            this.db = db;
+            this.username = username;
+            this.password = password;
+        }
+
+        public void AddAll()
+        {
             foreach (Sensor sensor in config.Sensors)
             {
                 if (sensor.Skip)
@@ -16,20 +30,22 @@ namespace OSWMontiorService
                     continue;
                 }
 
-                AddEntry(logger, sensor);
+                AddEntry(sensor);
             }
         }
 
-        public static void AddEntry(ILogger<Worker> logger, Sensor sensor)
+        public void AddEntry(Sensor sensor)
         {
-            if (!TableExists(logger, sensor))
+            if (!TableExists(sensor))
             {
-                CreateTable(logger, sensor);
+                CreateTable(sensor);
             }
 
             string tableName = sensor.IP.Replace(".", "");
 
-            using (OleDbConnection db = new OleDbConnection(@"Provider=Microsoft.ACE.OLEDB.16.0; Data Source = C:\Users\monroett\Desktop\OSWSensors.accdb"))
+            string connection = string.Format("Server={0}; database={1}; UID={2}; password={3}", server, db, username, password);
+
+            using (MySqlConnection db = new MySqlConnection(connection))
             {
                 try
                 {
@@ -42,7 +58,7 @@ namespace OSWMontiorService
                     return;
                 }
 
-                OleDbCommand command = new OleDbCommand("INSERT INTO " + tableName + " ([Temperature], [Humidity], [Dew], [Recording], [DateTime]) VALUES (?,?,?,?,?)", db);
+                MySqlCommand command = new MySqlCommand("INSERT INTO " + tableName + " ([Temperature], [Humidity], [Dew], [Recording], [DateTime]) VALUES (?,?,?,?,?)", db);
 
                 command.Parameters.AddWithValue("@Temperature" ,sensor.Temperature);
                 command.Parameters.AddWithValue("@Humidity", sensor.Humidity);
@@ -56,11 +72,13 @@ namespace OSWMontiorService
 
         }
 
-        private static bool TableExists(ILogger<Worker> logger, Sensor sensor)
+        private bool TableExists(Sensor sensor)
         {
             string tableName = sensor.IP.Replace(".", "");
 
-            using (OleDbConnection db = new OleDbConnection(@"Provider=Microsoft.ACE.OLEDB.16.0; Data Source = C:\Users\monroett\Desktop\OSWSensors.accdb"))
+            string connection = string.Format("Server={0}; database={1}; UID={2}; password={3}", server, db, username, password);
+
+            using (MySqlConnection db = new MySqlConnection(connection))
             {
                 try
                 {
@@ -73,9 +91,11 @@ namespace OSWMontiorService
                     return false;
                 }
 
-                DataTable schema = db.GetOleDbSchemaTable(OleDbSchemaGuid.Tables, new object[] { null, null, null, "TABLE" });
+                MySqlCommand command = new MySqlCommand("SHOW TABLES LIKE \'" + tableName + "\'", db);
 
-                if (schema.Rows.OfType<DataRow>().Any(r => r.ItemArray[2].ToString().ToLower() == tableName.ToLower()))
+                command.Prepare();
+
+                if (command.ExecuteReader().HasRows) 
                 {
                     return true;
                 }
@@ -84,11 +104,13 @@ namespace OSWMontiorService
             return false;
         }
 
-        private static void CreateTable(ILogger<Worker> logger, Sensor sensor)
+        private void CreateTable(Sensor sensor)
         {
             string tableName = sensor.IP.Replace(".", "");
 
-            using (OleDbConnection db = new OleDbConnection(@"Provider=Microsoft.ACE.OLEDB.16.0; Data Source = C:\Users\monroett\Desktop\OSWSensors.accdb"))
+            string connection = string.Format("Server={0}; database={1}; UID={2}; password={3}", server, db, username, password);
+
+            using (MySqlConnection db = new MySqlConnection(connection))
             {
                 try
                 {
@@ -101,14 +123,14 @@ namespace OSWMontiorService
                     return;
                 }
 
-                OleDbCommand command = new OleDbCommand("CREATE TABLE " + tableName + " ([Temperature] DOUBLE, [Humidity] DOUBLE, [Dew] DOUBLE, [Recording] BIT, [DateTime] DateTime)", db);
+                MySqlCommand command = new MySqlCommand("CREATE TABLE " + tableName + " ([Temperature] DOUBLE, [Humidity] DOUBLE, [Dew] DOUBLE, [Recording] BIT, [DateTime] DateTime)", db);
 
                 command.ExecuteNonQuery();
                 db.Close();
             }
         }
 
-        private static DateTime GetDateTime(DateTime d)
+        private DateTime GetDateTime(DateTime d)
         {
             // REMOVES MILLISECONDS. WORKAROUND FOR ERROR 'Data type mismatch in criteria expression'
             return new DateTime(d.Year, d.Month, d.Day, d.Hour, d.Minute, d.Second);

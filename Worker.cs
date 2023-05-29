@@ -1,5 +1,6 @@
 using HtmlAgilityPack;
 using Microsoft.CodeAnalysis;
+using System;
 using System.Net;
 using System.Net.Mail;
 
@@ -19,7 +20,9 @@ namespace OSWMontiorService
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            logger.LogInformation("Starting OSW Monitoring Service: {time}", DateTime.Now);
+            logger.LogInformation("[{time}]: Starting OSW Monitoring Service.", DateTime.Now);
+
+            InitDevMode();
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -30,43 +33,62 @@ namespace OSWMontiorService
                 {
                     if (!sensor.Skip)
                     {
-                        logger.LogInformation("Getting sensor data on device " + sensor.IP + ": {time}", DateTime.Now);
+                        logger.LogInformation("[{time}]: Getting sensor data on device " + sensor.IP, DateTime.Now);
                         config.Sensors.Add(GetSensor(sensor.Name, sensor.IP));
                     }
                     else
                     {
-                        logger.LogInformation("Skipping device " + sensor.IP + ": {time}", DateTime.Now);
+                        logger.LogInformation("[{time}]: Skipping device " + sensor.IP, DateTime.Now);
                     }
                 }
 
-                if (config.DataType == "Excel")
+                if(config.DataType.Type.Equals(DataType.DataTypes.EXCEL))
                 {
                     new Excel(logger, config).AddAll();
                 }
-                else if (config.DataType == "Access")
+                else if (config.DataType.Type.Equals(DataType.DataTypes.ACCESS))
                 {
                     new Access(logger, config).AddAll();
                 }
-                else if (config.DataType == "MySQL")
+                else if (config.DataType.Type.Equals(DataType.DataTypes.MYSQL))
                 {
-                    // NEED CONFIG OPTIONS FOR NULL VALUES
                     new MySQL(logger, config, null, null, null, null).AddAll();
                 }
 
-                await Task.Delay(1000 * 60 * config.Delay, stoppingToken);
+                int delay = config.DevMode ? 6 : config.Delay;
+
+                await Task.Delay(1000 * 60 * delay, stoppingToken);  
             }
         }
 
         private Sensor GetSensor(string name, string ip)
         {
             Sensor sensor = new Sensor(name, ip);
-            sensor.Skip = false;
+
+            if(config.DevMode)
+            {
+                if (new Random().Next(0, 100) < 10) //10%
+                {
+                    logger.LogError("[{time}][DEVMODE]: Failed to get sensor data on device " + ip, DateTime.Now);
+                    sensor.IsOffline = true;
+                }
+                else
+                {
+                    sensor.Temperature = Math.Round(new Random().NextDouble() * (100 - 30) + 30, 2);
+                    sensor.Humidity = Math.Round(new Random().NextDouble() * (60 - 30) + 30, 2);
+                    sensor.DewPoint = Math.Round(new Random().NextDouble() * (100 - 30) + 30, 2);
+                    sensor.IsOffline = false;
+                    sensor.IsRecording = true;
+                }
+
+                return sensor;
+            }
 
             var url = @"http://" + ip + "/postReadHtml?a=";
 
             if(!IsOnline(url))
             {
-                logger.LogError("Failed to get sensor data on device " + ip + ": {time}", DateTime.Now);
+                logger.LogError("[{time}]: Failed to get sensor data on device " + ip, DateTime.Now);
 
                 Mail mail = new Mail();
 
@@ -87,7 +109,7 @@ namespace OSWMontiorService
                 message.Subject = "OSW Sensor Offline";
                 message.Body = "[" + sensor.Name + " : " + sensor.IP + "] Sensor Offline";
 
-            //    smtpClient.Send(message);
+                smtpClient.Send(message);
 
                 sensor.IsOffline = true;
 
@@ -119,6 +141,19 @@ namespace OSWMontiorService
             sensor.IsRecording = recordUnformatted.Equals("ON") ? true : false;
 
             return sensor;
+        }
+
+        private void InitDevMode()
+        {
+            if(config.DevMode)
+            {
+                for(int i = 1; i < 10; i++)
+                {
+                    Sensor sensor = new Sensor("Test" + i, "10.0.0." + i);
+                    sensor.Skip = false;
+                    config.Sensors.Add(sensor);
+                }
+            }
         }
 
         private bool IsOnline(string url)

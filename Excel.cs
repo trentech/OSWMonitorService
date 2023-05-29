@@ -22,7 +22,7 @@ namespace OSWMontiorService
         {
             string tempFile = Path.Combine(Config.PATH, "temp.xlsx");
 
-            if (!File.Exists(Path.Combine(config.Destination, "OSW Sensors.xlsx")))
+            if (!File.Exists(Path.Combine(config.DataType.Datebase, "OSW Sensors.xlsx")))
             {
                 if (File.Exists(tempFile))
                 {
@@ -38,7 +38,7 @@ namespace OSWMontiorService
 
             while (IsFileLocked(tempFile))
             {
-                logger.LogWarning("[" + tempFile + "]: File is locked and cannot be written to. Trying again in 30 Seconds: {time}", DateTime.Now);
+                logger.LogWarning("[{time}][" + tempFile + "]: File is locked and cannot be written to. Trying again in 30 Seconds.", DateTime.Now);
                 Thread.Sleep(30000);
             }
 
@@ -63,7 +63,7 @@ namespace OSWMontiorService
                 stream.Close();
             }
 
-            CopyDataToPath(tempFile, config.Destination);
+            CopyDataToPath(tempFile, config.DataType.Datebase);
         }
 
         public void AddEntry(XSSFWorkbook workbook, Sensor sensor)
@@ -194,46 +194,85 @@ namespace OSWMontiorService
             await Task.Run(() => {
                 if (File.Exists(file))
                 {
+                    double index = 1;
                     while (IsFileLocked(file))
                     {
-                        logger.LogWarning("[" + file + "]: File is locked and cannot be written to. Trying again in 30 Seconds: {time}", DateTime.Now);
-                        Thread.Sleep(30000);
+                        double delay = config.DevMode ? 6 : config.Delay;
+                        double check = (delay / 6) * index;
 
                         TimeSpan timeSpan = stopWatch.Elapsed;
 
-                        if (timeSpan.TotalHours >= 1)
+                        if (timeSpan.TotalSeconds >= (delay * 60))
                         {
-                            Mail mail = new Mail();
+                            logger.LogError("[{time}][" + file + "]: File has been locked for " + Math.Round(timeSpan.TotalMinutes, 2) + " Minutes and cannot be written to. Timed out.", DateTime.Now);
 
-                            SmtpClient smtpClient = new SmtpClient(mail.STMP)
+                            if (!config.DevMode)
                             {
-                                Port = mail.Port,
-                                EnableSsl = mail.SSL,
-                            };
+                                Mail mail = new Mail();
 
-                            MailMessage message = new MailMessage();
-                            message.From = new MailAddress(mail.From);
+                                SmtpClient smtpClient = new SmtpClient(mail.STMP)
+                                {
+                                    Port = mail.Port,
+                                    EnableSsl = mail.SSL,
+                                };
 
-                            foreach (string address in mail.Recipients)
-                            {
-                                message.To.Add(new MailAddress(address));
+                                MailMessage message = new MailMessage();
+                                message.From = new MailAddress(mail.From);
+
+                                foreach (string address in mail.Recipients)
+                                {
+                                    message.To.Add(new MailAddress(address));
+                                }
+
+                                message.Subject = "OSW Sensor File Locked. Timed Out";
+                                message.Body = "[" + file + "]: File has been locked for " + Math.Round(timeSpan.TotalMinutes, 2) + " Minutes and cannot be written to. Timed out.";
+
+                                smtpClient.Send(message);
                             }
-
-                            message.Subject = "OSW Sensor File Locked";
-                            message.Body = "[" + file + "] File has been locked from editing for over an hour.";
-
-                            smtpClient.Send(message);
-
-                            logger.LogError("[" + file + "]: File is locked and cannot be written to: {time}", DateTime.Now);
 
                             return;
                         }
+                        else if (timeSpan.TotalSeconds >= (check * 60))
+                        {
+                            index++;
+                            logger.LogWarning("[{time}][" + file + "]: File has been locked for " + Math.Round(timeSpan.TotalMinutes, 2) + " Minutes and cannot be written to. Sending Email.", DateTime.Now);
+
+                            if (!config.DevMode)
+                            {
+                                Mail mail = new Mail();
+
+                                SmtpClient smtpClient = new SmtpClient(mail.STMP)
+                                {
+                                    Port = mail.Port,
+                                    EnableSsl = mail.SSL,
+                                };
+
+                                MailMessage message = new MailMessage();
+                                message.From = new MailAddress(mail.From);
+
+                                foreach (string address in mail.Recipients)
+                                {
+                                    message.To.Add(new MailAddress(address));
+                                }
+
+                                message.Subject = "OSW Sensor File Locked";
+                                message.Body = "[" + file + "] File has been locked for " + Math.Round(timeSpan.TotalMinutes, 2) + " Minutes and cannot be written to.";
+
+                                smtpClient.Send(message);
+                            }
+                        }
+                        else
+                        {
+                            logger.LogWarning("[{time}][" + file + "]: File is locked and cannot be written to.", DateTime.Now);
+                        }
+
+                        Thread.Sleep(config.DevMode ? 10000 : 30000);
                     }
 
                     File.Delete(file);
                 }
 
-                logger.LogInformation("[" + file + "]: Writing to file: {time}", DateTime.Now);
+                logger.LogInformation("[{time}][" + file + "]: Saving.", DateTime.Now);
                 File.Copy(source, file);
             });
         }

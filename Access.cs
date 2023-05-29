@@ -30,7 +30,7 @@ namespace OSWMontiorService
 
         public void AddEntry(Sensor sensor)
         {
-            string dbFile = Path.Combine(config.Destination, "OSWSensors.accdb");
+            string dbFile = Path.Combine(config.DataType.Datebase, "OSWSensors.accdb");
 
             if (!File.Exists(dbFile))
             {
@@ -44,7 +44,7 @@ namespace OSWMontiorService
 
             string tableName = sensor.IP.Replace(".", "");
 
-            using (OleDbConnection db = new OleDbConnection(@"Provider=Microsoft.ACE.OLEDB.16.0; Data Source = " + Path.Combine(config.Destination, "OSWSensors.accdb")))
+            using (OleDbConnection db = new OleDbConnection(@"Provider=Microsoft.ACE.OLEDB.16.0; Data Source = " + Path.Combine(config.DataType.Datebase, "OSWSensors.accdb")))
             {
                 try
                 {
@@ -52,7 +52,7 @@ namespace OSWMontiorService
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError("Failed to open Database file: {time}", DateTime.Now);
+                    logger.LogError("[{time}]: Failed to open Database file.", DateTime.Now);
                     logger.LogError(ex.Message, DateTime.Now);
                     return;
                 }
@@ -83,7 +83,7 @@ namespace OSWMontiorService
         {
             string tableName = sensor.IP.Replace(".", "");
 
-            using (OleDbConnection db = new OleDbConnection(@"Provider=Microsoft.ACE.OLEDB.16.0; Data Source = " + Path.Combine(config.Destination, "OSWSensors.accdb")))
+            using (OleDbConnection db = new OleDbConnection(@"Provider=Microsoft.ACE.OLEDB.16.0; Data Source = " + Path.Combine(config.DataType.Datebase, "OSWSensors.accdb")))
             {
                 try
                 {
@@ -91,7 +91,7 @@ namespace OSWMontiorService
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError("Failed to open Database file: {time}", DateTime.Now);
+                    logger.LogError("[{time}]: Failed to open Database file.", DateTime.Now);
                     logger.LogError(ex.Message, DateTime.Now);
                     return false;
                 }
@@ -111,7 +111,7 @@ namespace OSWMontiorService
         {
             string tableName = sensor.IP.Replace(".", "");
 
-            using (OleDbConnection db = new OleDbConnection(@"Provider=Microsoft.ACE.OLEDB.16.0; Data Source = " + Path.Combine(config.Destination, "OSWSensors.accdb")))
+            using (OleDbConnection db = new OleDbConnection(@"Provider=Microsoft.ACE.OLEDB.16.0; Data Source = " + Path.Combine(config.DataType.Datebase, "OSWSensors.accdb")))
             {
                 try
                 {
@@ -119,7 +119,7 @@ namespace OSWMontiorService
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError("Failed to open Database file: {time}", DateTime.Now);
+                    logger.LogError("[{time}]: Failed to open Database file", DateTime.Now);
                     logger.LogError(ex.Message, DateTime.Now);
                     return;
                 }

@@ -53,7 +53,7 @@ namespace OSWMontiorService
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError("Failed to open Database file: {time}", DateTime.Now);
+                    logger.LogError("[{time}]: Failed to open Database file.", DateTime.Now);
                     logger.LogError(ex.Message, DateTime.Now);
                     return;
                 }
@@ -86,7 +86,7 @@ namespace OSWMontiorService
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError("Failed to open Database file: {time}", DateTime.Now);
+                    logger.LogError("[{time}]: Failed to open Database file.", DateTime.Now);
                     logger.LogError(ex.Message, DateTime.Now);
                     return false;
                 }
@@ -118,7 +118,7 @@ namespace OSWMontiorService
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError("Failed to open Database file: {time}", DateTime.Now);
+                    logger.LogError("[{time}]: Failed to open Database file.", DateTime.Now);
                     logger.LogError(ex.Message, DateTime.Now);
                     return;
                 }

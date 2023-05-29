@@ -1,44 +1,22 @@
 ﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using static System.Environment;
 
 namespace OSWMontiorService
 {
-    public class Mail
-    {
-        [JsonProperty]
-        public string STMP { get; set; }
-        [JsonProperty]
-        public int Port { get; set; }
-        [JsonProperty]
-        public bool SSL { get; set; }
-        [JsonProperty]
-        public string From { get; set; }
-        [JsonProperty]
-        public List<string> Recipients { get; set; }
-
-        public Mail() 
-        {
-            STMP = "smtp.gmail.com";
-            Port = 25;
-            SSL = false;
-            From = "example@email.com";
-            Recipients = new List<string>() { "test1@example.com", "test2@example.com" };
-        }
-    }
 
     public class Config
     {
         [JsonProperty]
-        public List<Sensor> Sensors { get; set; }
-
-        [JsonProperty("Path")]
-        public string Destination { get; set; }
-        [JsonProperty]
-        public string DataType { get; set; }
+        public DataType DataType { get; set; }
         [JsonProperty]
         public int Delay { get; set; }
         [JsonProperty]
         public Mail Email { get; set; }
+        [JsonProperty]
+        public List<Sensor> Sensors { get; set; }
+        [JsonProperty]
+        public bool DevMode { get; set; }
 
         [JsonIgnore]
         public static string PATH = Path.Combine(GetFolderPath(SpecialFolder.CommonApplicationData), "OSW Monitoring");
@@ -48,10 +26,10 @@ namespace OSWMontiorService
         public Config()
         {
             Sensors = new List<Sensor>();
-            Destination = PATH;
-            DataType = "Excel";
+            DataType = new DataType();
             Delay = 10;
             Email = new Mail();
+            DevMode = false;
         }
 
         public static Config Get()
@@ -70,7 +48,6 @@ namespace OSWMontiorService
 
                 config = new Config();
                 config.Sensors.Add(example);
-                config.Destination = PATH;
 
                 File.WriteAllText(CONFIG, JsonConvert.SerializeObject(config, Formatting.Indented));
             }
@@ -85,6 +62,57 @@ namespace OSWMontiorService
         public void Save()
         {
             File.WriteAllText(CONFIG, JsonConvert.SerializeObject(this, Formatting.Indented));
+        }
+    }
+
+    public class DataType
+    {
+        public enum DataTypes
+        {
+            MYSQL, EXCEL, ACCESS
+        }
+
+        [JsonConverter(typeof(StringEnumConverter))]
+        public DataTypes Type { get; set; }
+        [JsonProperty]
+        public string Server { get; set; }
+        [JsonProperty]
+        public string Datebase { get; set; }
+        [JsonProperty]
+        public string Username { get; set; }
+        [JsonProperty]
+        public string Password { get; set; }
+
+        public DataType()
+        {
+            this.Type = DataTypes.EXCEL;
+            this.Server = "localhost";
+            this.Datebase = Config.PATH;
+            this.Username = "root";
+            this.Password = "password";
+        }
+    }
+
+    public class Mail
+    {
+        [JsonProperty]
+        public string STMP { get; set; }
+        [JsonProperty]
+        public int Port { get; set; }
+        [JsonProperty]
+        public bool SSL { get; set; }
+        [JsonProperty]
+        public string From { get; set; }
+        [JsonProperty]
+        public List<string> Recipients { get; set; }
+
+        public Mail()
+        {
+            STMP = "smtp.gmail.com";
+            Port = 25;
+            SSL = false;
+            From = "example@email.com";
+            Recipients = new List<string>() { "test1@example.com", "test2@example.com" };
         }
     }
 }

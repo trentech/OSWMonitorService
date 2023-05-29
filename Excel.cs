@@ -2,6 +2,7 @@
 using NPOI.SS.UserModel;
 using NPOI.SS.Util;
 using NPOI.XSSF.UserModel;
+using Serilog;
 using System.Diagnostics;
 using System.Net.Mail;
 
@@ -10,11 +11,9 @@ namespace OSWMontiorService
     public class Excel
     {
         Config config;
-        ILogger<Worker> logger;
 
-        public Excel(ILogger<Worker> logger, Config config)
+        public Excel(Config config)
         {
-            this.logger = logger;
             this.config = config;
         }
 
@@ -38,7 +37,7 @@ namespace OSWMontiorService
 
             while (IsFileLocked(tempFile))
             {
-                logger.LogWarning("[{time}][" + tempFile + "]: File is locked and cannot be written to. Trying again in 30 Seconds.", DateTime.Now);
+                Log.Warning("[" + tempFile + "]: File is locked and cannot be written to. Trying again in 30 Seconds.");
                 Thread.Sleep(30000);
             }
 
@@ -204,7 +203,7 @@ namespace OSWMontiorService
 
                         if (timeSpan.TotalSeconds >= (delay * 60))
                         {
-                            logger.LogError("[{time}][" + file + "]: File has been locked for " + Math.Round(timeSpan.TotalMinutes, 2) + " Minutes and cannot be written to. Timed out.", DateTime.Now);
+                            Log.Error("[" + file + "]: File has been locked for " + Math.Round(timeSpan.TotalMinutes, 2) + " Minutes and cannot be written to. Timed out.");
 
                             if (!config.DevMode)
                             {
@@ -235,7 +234,7 @@ namespace OSWMontiorService
                         else if (timeSpan.TotalSeconds >= (check * 60))
                         {
                             index++;
-                            logger.LogWarning("[{time}][" + file + "]: File has been locked for " + Math.Round(timeSpan.TotalMinutes, 2) + " Minutes and cannot be written to. Sending Email.", DateTime.Now);
+                            Log.Warning("[" + file + "]: File has been locked for " + Math.Round(timeSpan.TotalMinutes, 2) + " Minutes and cannot be written to. Sending Email.");
 
                             if (!config.DevMode)
                             {
@@ -263,7 +262,7 @@ namespace OSWMontiorService
                         }
                         else
                         {
-                            logger.LogWarning("[{time}][" + file + "]: File is locked and cannot be written to.", DateTime.Now);
+                            Log.Warning("[" + file + "]: File is locked and cannot be written to.");
                         }
 
                         Thread.Sleep(config.DevMode ? 10000 : 30000);
@@ -272,7 +271,7 @@ namespace OSWMontiorService
                     File.Delete(file);
                 }
 
-                logger.LogInformation("[{time}][" + file + "]: Saving.", DateTime.Now);
+                Log.Information("[" + file + "]: Saving.");
                 File.Copy(source, file);
             });
         }

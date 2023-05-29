@@ -1,4 +1,5 @@
 ﻿using OSWMontiorService.Properties;
+using Serilog;
 using System.Data;
 using System.Data.OleDb;
 
@@ -7,11 +8,9 @@ namespace OSWMontiorService
     public class Access
     {
         Config config;
-        ILogger<Worker> logger;
 
-        public Access(ILogger<Worker> logger, Config config) 
+        public Access(Config config) 
         {
-            this.logger = logger;
             this.config = config;
         }
 
@@ -52,8 +51,8 @@ namespace OSWMontiorService
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError("[{time}]: Failed to open Database file.", DateTime.Now);
-                    logger.LogError(ex.Message, DateTime.Now);
+                    Log.Error("Failed to open Database file.");
+                    Log.Error(ex.Message);
                     return;
                 }
 
@@ -91,8 +90,8 @@ namespace OSWMontiorService
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError("[{time}]: Failed to open Database file.", DateTime.Now);
-                    logger.LogError(ex.Message, DateTime.Now);
+                    Log.Error("Failed to open Database file.");
+                    Log.Error(ex.Message);
                     return false;
                 }
 
@@ -119,8 +118,8 @@ namespace OSWMontiorService
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError("[{time}]: Failed to open Database file", DateTime.Now);
-                    logger.LogError(ex.Message, DateTime.Now);
+                    Log.Error("Failed to open Database file.");
+                    Log.Error(ex.Message);
                     return;
                 }
 

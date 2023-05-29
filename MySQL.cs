@@ -1,19 +1,19 @@
 ﻿using MySql.Data.MySqlClient;
+using Serilog;
 
 namespace OSWMontiorService
 {
     public class MySQL
     {
         Config config;
-        ILogger<Worker> logger;
+
         string server;
         string db;
         string username;
         string password;
 
-        public MySQL(ILogger<Worker> logger, Config config, string server, string db, string username, string password)
+        public MySQL(Config config, string server, string db, string username, string password)
         {
-            this.logger = logger;
             this.config = config;
             this.server = server;
             this.db = db;
@@ -53,8 +53,8 @@ namespace OSWMontiorService
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError("[{time}]: Failed to open Database file.", DateTime.Now);
-                    logger.LogError(ex.Message, DateTime.Now);
+                    Log.Error("Failed to open Database file.");
+                    Log.Error(ex.Message);
                     return;
                 }
 
@@ -86,8 +86,8 @@ namespace OSWMontiorService
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError("[{time}]: Failed to open Database file.", DateTime.Now);
-                    logger.LogError(ex.Message, DateTime.Now);
+                    Log.Error("Failed to open Database file.");
+                    Log.Error(ex.Message);
                     return false;
                 }
 
@@ -118,8 +118,8 @@ namespace OSWMontiorService
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError("[{time}]: Failed to open Database file.", DateTime.Now);
-                    logger.LogError(ex.Message, DateTime.Now);
+                    Log.Error("Failed to open Database file.");
+                    Log.Error(ex.Message);
                     return;
                 }
 

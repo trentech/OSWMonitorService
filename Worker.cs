@@ -1,5 +1,6 @@
 using HtmlAgilityPack;
 using Microsoft.CodeAnalysis;
+using Serilog;
 using System;
 using System.Net;
 using System.Net.Mail;
@@ -8,22 +9,30 @@ namespace OSWMontiorService
 {
     public class Worker : BackgroundService
     {
-        private readonly ILogger<Worker> logger;
-
         private Config config;
 
-        public Worker(ILogger<Worker> logger)
+        public Worker()
         {
-            this.logger = logger;
             this.config = Config.Get();
+        }
+
+        public override Task StartAsync(CancellationToken cancellationToken)
+        {
+            Log.Information("Starting OSW Monitoring Service.");
+
+            InitDevMode();
+            return base.StartAsync(cancellationToken);
+        }
+
+        public override Task StopAsync(CancellationToken cancellationToken)
+        {
+            Log.Information("Stopping OSW Monitoring Service.");
+
+            return base.StopAsync(cancellationToken);
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            logger.LogInformation("[{time}]: Starting OSW Monitoring Service.", DateTime.Now);
-
-            InitDevMode();
-
             while (!stoppingToken.IsCancellationRequested)
             {
                 List<Sensor> list = new List<Sensor>(config.Sensors);
@@ -33,26 +42,26 @@ namespace OSWMontiorService
                 {
                     if (!sensor.Skip)
                     {
-                        logger.LogInformation("[{time}]: Getting sensor data on device " + sensor.IP, DateTime.Now);
+                        Log.Information("Getting sensor data on device " + sensor.IP);
                         config.Sensors.Add(GetSensor(sensor.Name, sensor.IP));
                     }
                     else
                     {
-                        logger.LogInformation("[{time}]: Skipping device " + sensor.IP, DateTime.Now);
+                        Log.Information("Skipping device " + sensor.IP);
                     }
                 }
 
                 if(config.DataType.Type.Equals(DataType.DataTypes.EXCEL))
                 {
-                    new Excel(logger, config).AddAll();
+                    new Excel(config).AddAll();
                 }
                 else if (config.DataType.Type.Equals(DataType.DataTypes.ACCESS))
                 {
-                    new Access(logger, config).AddAll();
+                    new Access(config).AddAll();
                 }
                 else if (config.DataType.Type.Equals(DataType.DataTypes.MYSQL))
                 {
-                    new MySQL(logger, config, null, null, null, null).AddAll();
+                    new MySQL(config, null, null, null, null).AddAll();
                 }
 
                 int delay = config.DevMode ? 6 : config.Delay;
@@ -69,7 +78,7 @@ namespace OSWMontiorService
             {
                 if (new Random().Next(0, 100) < 10) //10%
                 {
-                    logger.LogError("[{time}][DEVMODE]: Failed to get sensor data on device " + ip, DateTime.Now);
+                    Log.Error("[DEVMODE]: Failed to get sensor data on device " + ip);
                     sensor.IsOffline = true;
                 }
                 else
@@ -88,7 +97,7 @@ namespace OSWMontiorService
 
             if(!IsOnline(url))
             {
-                logger.LogError("[{time}]: Failed to get sensor data on device " + ip, DateTime.Now);
+                Log.Error("Failed to get sensor data on device " + ip);
 
                 Mail mail = new Mail();
 

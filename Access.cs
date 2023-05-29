@@ -66,13 +66,12 @@ namespace OSWMontiorService
 
                 command.ExecuteNonQuery();
 
-                // BELOW IS THROWING SYNTAX ERROR. NO CLUE WHY 
-                //command = new OleDbCommand("INSERT INTO Names ([IP], [Name]) VALUES (?,?)", db);
+                command = new OleDbCommand("INSERT INTO [Names] ([IP], [Name]) VALUES (?,?)", db);
 
-                //command.Parameters.AddWithValue("@IP", tableName);
-                //command.Parameters.AddWithValue("@Name", sensor.Name);
+                command.Parameters.AddWithValue("@IP", tableName);
+                command.Parameters.AddWithValue("@SensorName", sensor.Name);
 
-                //command.ExecuteNonQuery();
+                command.ExecuteNonQuery();
 
                 db.Close();
             }

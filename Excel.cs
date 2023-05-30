@@ -70,6 +70,11 @@ namespace OSWMonitorService
         public void AddEntry(XSSFWorkbook workbook, Sensor sensor)
         {
             ISheet sheet = workbook.GetSheet(sensor.IP);
+            
+            if(sheet == null)
+            {
+                sheet = CreateWorkSheet(workbook, sensor);
+            }
 
             IRow row = sheet.CreateRow(sheet.LastRowNum + 1);
 
@@ -109,7 +114,7 @@ namespace OSWMonitorService
             }
         }
 
-        private void CreateWorkSheet(XSSFWorkbook workbook, Sensor sensor)
+        private ISheet CreateWorkSheet(XSSFWorkbook workbook, Sensor sensor)
         {
             ISheet sheet = workbook.CreateSheet(sensor.IP);
             sheet.DefaultColumnWidth = 15;
@@ -165,6 +170,8 @@ namespace OSWMonitorService
             cell = row.CreateCell(5);
             cell.CellStyle = style;
             cell.SetCellValue("Time");
+
+            return sheet;
         }
 
         private void CreateSpreadSheet(string path, Config config)

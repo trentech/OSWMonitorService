@@ -9,12 +9,6 @@ namespace OSWMonitorService
 {
     public class Worker : BackgroundService
     {
-        private Config config;
-
-        public Worker()
-        {
-            this.config = Config.Get();
-        }
 
         public override Task StartAsync(CancellationToken cancellationToken)
         {
@@ -35,6 +29,7 @@ namespace OSWMonitorService
         {
             while (!stoppingToken.IsCancellationRequested)
             {
+                Config config = Config.Get();
                 List<Sensor> list = new List<Sensor>(config.Sensors);
                 config.Sensors.Clear();
 
@@ -43,7 +38,7 @@ namespace OSWMonitorService
                     if (!sensor.Skip)
                     {
                         Log.Information("Getting sensor data on device " + sensor.IP);
-                        config.Sensors.Add(GetSensor(sensor.Name, sensor.IP));
+                        config.Sensors.Add(GetSensor(config, sensor.Name, sensor.IP));
                     }
                     else
                     {
@@ -70,7 +65,7 @@ namespace OSWMonitorService
             }
         }
 
-        private Sensor GetSensor(string name, string ip)
+        private Sensor GetSensor(Config config, string name, string ip)
         {
             Sensor sensor = new Sensor(name, ip);
 
@@ -154,6 +149,8 @@ namespace OSWMonitorService
 
         private void InitDevMode()
         {
+            Config config = Config.Get();
+
             if(config.DevMode)
             {
                 for(int i = 1; i < 10; i++)

@@ -63,9 +63,9 @@ namespace OSWMontiorService.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
-        internal static byte[] OSWSensors {
+        internal static byte[] database {
             get {
-                object obj = ResourceManager.GetObject("OSWSensors", resourceCulture);
+                object obj = ResourceManager.GetObject("database", resourceCulture);
                 return ((byte[])(obj));
             }
         }

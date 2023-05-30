@@ -20,12 +20,14 @@ namespace OSWMontiorService
         public void AddAll()
         {
             string tempFile = Path.Combine(Config.PATH, "temp.xlsx");
+            string dbFile = Path.Combine(config.DataType.Path, config.DataType.Name) + ".xlsx";
 
-            if (!File.Exists(Path.Combine(config.DataType.Datebase, "OSW Sensors.xlsx")))
+            if (!File.Exists(dbFile))
             {
                 if (File.Exists(tempFile))
                 {
-                    File.Move(tempFile, Path.Combine(Config.PATH, "temp" + " " + DateOnly.FromDateTime(DateTime.Now).ToString() + ".xlsx"));
+                    Console.WriteLine(Path.Combine(Config.PATH, "temp" + "_" + DateTime.Now.ToString("MM-dd-yyyy_h:mm_tt") + ".xlsx"));
+                    File.Move(tempFile, Path.Combine(Config.PATH, "temp" + "_" + DateTime.Now.ToString("MM-dd-yyyy_h-mm_tt") + ".xlsx"));
                 }
             }
 
@@ -62,7 +64,7 @@ namespace OSWMontiorService
                 stream.Close();
             }
 
-            CopyDataToPath(tempFile, config.DataType.Datebase);
+            CopyDataToPath(tempFile, dbFile);
         }
 
         public void AddEntry(XSSFWorkbook workbook, Sensor sensor)
@@ -188,13 +190,11 @@ namespace OSWMontiorService
 
             TimeOnly time = TimeOnly.FromDateTime(DateTime.Now);
 
-            string file = Path.Combine(destination, "OSW Sensors.xlsx");
-
             await Task.Run(() => {
-                if (File.Exists(file))
+                if (File.Exists(destination))
                 {
                     double index = 1;
-                    while (IsFileLocked(file))
+                    while (IsFileLocked(destination))
                     {
                         double delay = config.DevMode ? 6 : config.Delay;
                         double check = (delay / 6) * index;
@@ -203,7 +203,7 @@ namespace OSWMontiorService
 
                         if (timeSpan.TotalSeconds >= (delay * 60))
                         {
-                            Log.Error("[" + file + "]: File has been locked for " + Math.Round(timeSpan.TotalMinutes, 2) + " Minutes and cannot be written to. Timed out.");
+                            Log.Error("[" + destination + "]: File has been locked for " + Math.Round(timeSpan.TotalMinutes, 2) + " Minutes and cannot be written to. Timed out.");
 
                             if (!config.DevMode)
                             {
@@ -224,17 +224,18 @@ namespace OSWMontiorService
                                 }
 
                                 message.Subject = "OSW Sensor File Locked. Timed Out";
-                                message.Body = "[" + file + "]: File has been locked for " + Math.Round(timeSpan.TotalMinutes, 2) + " Minutes and cannot be written to. Timed out.";
+                                message.Body = "[" + destination + "]: File has been locked for " + Math.Round(timeSpan.TotalMinutes, 2) + " Minutes and cannot be written to. Timed out.";
 
                                 smtpClient.Send(message);
                             }
 
+                            stopWatch.Stop();
                             return;
                         }
                         else if (timeSpan.TotalSeconds >= (check * 60))
                         {
                             index++;
-                            Log.Warning("[" + file + "]: File has been locked for " + Math.Round(timeSpan.TotalMinutes, 2) + " Minutes and cannot be written to. Sending Email.");
+                            Log.Warning("[" + destination + "]: File has been locked for " + Math.Round(timeSpan.TotalMinutes, 2) + " Minutes and cannot be written to. Sending Email.");
 
                             if (!config.DevMode)
                             {
@@ -255,24 +256,24 @@ namespace OSWMontiorService
                                 }
 
                                 message.Subject = "OSW Sensor File Locked";
-                                message.Body = "[" + file + "] File has been locked for " + Math.Round(timeSpan.TotalMinutes, 2) + " Minutes and cannot be written to.";
+                                message.Body = "[" + destination + "] File has been locked for " + Math.Round(timeSpan.TotalMinutes, 2) + " Minutes and cannot be written to.";
 
                                 smtpClient.Send(message);
                             }
                         }
                         else
                         {
-                            Log.Warning("[" + file + "]: File is locked and cannot be written to.");
+                            Log.Warning("[" + destination + "]: File is locked and cannot be written to.");
                         }
 
                         Thread.Sleep(config.DevMode ? 10000 : 30000);
                     }
 
-                    File.Delete(file);
+                    File.Delete(destination);
                 }
 
-                Log.Information("[" + file + "]: Saving.");
-                File.Copy(source, file);
+                Log.Information("[" + destination + "]: Saving.");
+                File.Copy(source, destination);
             });
         }
 

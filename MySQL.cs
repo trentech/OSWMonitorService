@@ -1,5 +1,6 @@
 ﻿using MySql.Data.MySqlClient;
 using Serilog;
+using System.ComponentModel.DataAnnotations;
 
 namespace OSWMontiorService
 {
@@ -7,18 +8,9 @@ namespace OSWMontiorService
     {
         Config config;
 
-        string server;
-        string db;
-        string username;
-        string password;
-
-        public MySQL(Config config, string server, string db, string username, string password)
+        public MySQL(Config config)
         {
             this.config = config;
-            this.server = server;
-            this.db = db;
-            this.username = username;
-            this.password = password;
         }
 
         public void AddAll()
@@ -42,8 +34,8 @@ namespace OSWMontiorService
             }
 
             string tableName = sensor.IP.Replace(".", "");
-
-            string connection = string.Format("Server={0}; database={1}; UID={2}; password={3}", server, db, username, password);
+            DataType dataType = config.DataType;
+            string connection = string.Format("Server={0}; database={1}; UID={2}; password={3}", dataType.Path, dataType.Name, dataType.Username, dataType.Password);
 
             using (MySqlConnection db = new MySqlConnection(connection))
             {
@@ -75,8 +67,8 @@ namespace OSWMontiorService
         private bool TableExists(Sensor sensor)
         {
             string tableName = sensor.IP.Replace(".", "");
-
-            string connection = string.Format("Server={0}; database={1}; UID={2}; password={3}", server, db, username, password);
+            DataType dataType = config.DataType;
+            string connection = string.Format("Server={0}; database={1}; UID={2}; password={3}", dataType.Path, dataType.Name, dataType.Username, dataType.Password);
 
             using (MySqlConnection db = new MySqlConnection(connection))
             {
@@ -107,8 +99,8 @@ namespace OSWMontiorService
         private void CreateTable(Sensor sensor)
         {
             string tableName = sensor.IP.Replace(".", "");
-
-            string connection = string.Format("Server={0}; database={1}; UID={2}; password={3}", server, db, username, password);
+            DataType dataType = config.DataType;
+            string connection = string.Format("Server={0}; database={1}; UID={2}; password={3}", dataType.Path, dataType.Name, dataType.Username, dataType.Password);
 
             using (MySqlConnection db = new MySqlConnection(connection))
             {

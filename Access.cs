@@ -29,11 +29,11 @@ namespace OSWMontiorService
 
         public void AddEntry(Sensor sensor)
         {
-            string dbFile = Path.Combine(config.DataType.Datebase, "OSWSensors.accdb");
+            string dbFile = Path.Combine(config.DataType.Path, config.DataType.Name) + ".accdb";
 
             if (!File.Exists(dbFile))
             {
-                File.WriteAllBytes(dbFile, Resources.OSWSensors);
+                File.WriteAllBytes(dbFile, Resources.database);
             }
 
             if (!TableExists(sensor))
@@ -43,7 +43,7 @@ namespace OSWMontiorService
 
             string tableName = sensor.IP.Replace(".", "");
 
-            using (OleDbConnection db = new OleDbConnection(@"Provider=Microsoft.ACE.OLEDB.16.0; Data Source = " + Path.Combine(config.DataType.Datebase, "OSWSensors.accdb")))
+            using (OleDbConnection db = new OleDbConnection(@"Provider=Microsoft.ACE.OLEDB.16.0; Data Source = " + dbFile))
             {
                 try
                 {
@@ -79,9 +79,10 @@ namespace OSWMontiorService
 
         private bool TableExists(Sensor sensor)
         {
+            string dbFile = Path.Combine(config.DataType.Path, config.DataType.Name) + ".accdb";
             string tableName = sensor.IP.Replace(".", "");
 
-            using (OleDbConnection db = new OleDbConnection(@"Provider=Microsoft.ACE.OLEDB.16.0; Data Source = " + Path.Combine(config.DataType.Datebase, "OSWSensors.accdb")))
+            using (OleDbConnection db = new OleDbConnection(@"Provider=Microsoft.ACE.OLEDB.16.0; Data Source = " + dbFile))
             {
                 try
                 {
@@ -107,9 +108,10 @@ namespace OSWMontiorService
 
         private void CreateTable(Sensor sensor)
         {
+            string dbFile = Path.Combine(config.DataType.Path, config.DataType.Name) + ".accdb";
             string tableName = sensor.IP.Replace(".", "");
 
-            using (OleDbConnection db = new OleDbConnection(@"Provider=Microsoft.ACE.OLEDB.16.0; Data Source = " + Path.Combine(config.DataType.Datebase, "OSWSensors.accdb")))
+            using (OleDbConnection db = new OleDbConnection(@"Provider=Microsoft.ACE.OLEDB.16.0; Data Source = " + dbFile))
             {
                 try
                 {

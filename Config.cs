@@ -75,9 +75,9 @@ namespace OSWMontiorService
         [JsonConverter(typeof(StringEnumConverter))]
         public DataTypes Type { get; set; }
         [JsonProperty]
-        public string Server { get; set; }
+        public string Path { get; set; }
         [JsonProperty]
-        public string Datebase { get; set; }
+        public string Name { get; set; }
         [JsonProperty]
         public string Username { get; set; }
         [JsonProperty]
@@ -86,8 +86,8 @@ namespace OSWMontiorService
         public DataType()
         {
             this.Type = DataTypes.EXCEL;
-            this.Server = "localhost";
-            this.Datebase = Config.PATH;
+            this.Path = Config.PATH; 
+            this.Name = "database"; // EXCLUDE EXTENSION
             this.Username = "root";
             this.Password = "password";
         }

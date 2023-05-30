@@ -61,7 +61,7 @@ namespace OSWMontiorService
                 }
                 else if (config.DataType.Type.Equals(DataType.DataTypes.MYSQL))
                 {
-                    new MySQL(config, null, null, null, null).AddAll();
+                    new MySQL(config).AddAll();
                 }
 
                 int delay = config.DevMode ? 6 : config.Delay;

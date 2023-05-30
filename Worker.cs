@@ -31,6 +31,7 @@ namespace OSWMonitorService
             {
                 Config config = Config.Get();
                 List<Sensor> list = new List<Sensor>(config.Sensors);
+                List<Sensor> OfflineSensors = new List<Sensor>();
                 config.Sensors.Clear();
 
                 foreach (Sensor sensor in list)
@@ -38,12 +39,24 @@ namespace OSWMonitorService
                     if (!sensor.Skip)
                     {
                         Log.Information("Getting sensor data on device " + sensor.IP);
-                        config.Sensors.Add(GetSensor(config, sensor.Name, sensor.IP));
+                        Sensor s = GetSensor(config, sensor.Name, sensor.IP);
+
+                        if(s.IsOffline)
+                        {
+                            OfflineSensors.Add(s);
+                        }
+
+                        config.Sensors.Add(s);
                     }
                     else
                     {
                         Log.Information("Skipping device " + sensor.IP);
                     }
+                }
+
+                if(OfflineSensors.Count > 0)
+                {
+                    SendEmail(config.Email, OfflineSensors);
                 }
 
                 if(config.DataType.Type.Equals(DataType.DataTypes.EXCEL))
@@ -152,6 +165,46 @@ namespace OSWMonitorService
             sensor.IsRecording = recordUnformatted.Equals("ON") ? true : false;
 
             return sensor;
+        }
+
+        private void SendEmail(Mail mail, List<Sensor> OfflineSensors)
+        {
+            SmtpClient smtpClient = new SmtpClient(mail.STMP)
+            {
+                Port = mail.Port,
+                EnableSsl = mail.SSL,
+                UseDefaultCredentials = true
+            };
+
+            MailMessage message = new MailMessage();
+            message.From = new MailAddress(mail.From);
+
+            foreach (string address in mail.Recipients)
+            {
+                MailAddress email = new MailAddress(address);
+                Log.Information("Sending email to " + email.Address);
+                message.To.Add(email);
+            }
+
+            message.Subject = "OSW Sensor Offline";
+
+            string body = "The following sensors are offline:" + Environment.NewLine;
+
+            foreach(Sensor sensor in OfflineSensors)
+            {
+                body = body + Environment.NewLine + sensor.Name + " - " + sensor.IP;
+            }
+
+            message.Body = body;
+
+            try
+            {
+                smtpClient.Send(message);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Email notification failed");
+            }
         }
 
         private void InitDevMode()

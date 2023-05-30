@@ -6,7 +6,7 @@ using Serilog;
 using System.Diagnostics;
 using System.Net.Mail;
 
-namespace OSWMontiorService
+namespace OSWMonitorService
 {
     public class Excel
     {

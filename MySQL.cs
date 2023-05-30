@@ -2,7 +2,7 @@
 using Serilog;
 using System.ComponentModel.DataAnnotations;
 
-namespace OSWMontiorService
+namespace OSWMonitorService
 {
     public class MySQL
     {

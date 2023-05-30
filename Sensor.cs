@@ -2,7 +2,7 @@
 using System.Reflection.PortableExecutable;
 using static System.Environment;
 
-namespace OSWMontiorService
+namespace OSWMonitorService
 {
     public class Sensor
     {

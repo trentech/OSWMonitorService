@@ -1,4 +1,4 @@
-using OSWMontiorService;
+using OSWMonitorService;
 using Serilog;
 using Serilog.Events;
 

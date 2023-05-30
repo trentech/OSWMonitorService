@@ -2,7 +2,7 @@
 using Newtonsoft.Json.Converters;
 using static System.Environment;
 
-namespace OSWMontiorService
+namespace OSWMonitorService
 {
 
     public class Config

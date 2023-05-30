@@ -1,9 +1,9 @@
-﻿using OSWMontiorService.Properties;
+﻿using OSWMonitorService.Properties;
 using Serilog;
 using System.Data;
 using System.Data.OleDb;
 
-namespace OSWMontiorService
+namespace OSWMonitorService
 {
     public class Access
     {

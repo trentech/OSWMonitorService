@@ -214,12 +214,13 @@ namespace OSWMonitorService
 
                             if (!config.DevMode)
                             {
-                                Mail mail = new Mail();
+                                Mail mail = config.Email;
 
                                 SmtpClient smtpClient = new SmtpClient(mail.STMP)
                                 {
                                     Port = mail.Port,
                                     EnableSsl = mail.SSL,
+                                    UseDefaultCredentials = true
                                 };
 
                                 MailMessage message = new MailMessage();
@@ -233,7 +234,14 @@ namespace OSWMonitorService
                                 message.Subject = "OSW Sensor File Locked. Timed Out";
                                 message.Body = "[" + destination + "]: File has been locked for " + Math.Round(timeSpan.TotalMinutes, 2) + " Minutes and cannot be written to. Timed out.";
 
-                                smtpClient.Send(message);
+                                try
+                                {
+                                    smtpClient.Send(message);
+                                }
+                                catch (Exception ex)
+                                {
+                                    Log.Error("Email notification failed", ex);
+                                }
                             }
 
                             stopWatch.Stop();

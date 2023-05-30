@@ -94,12 +94,13 @@ namespace OSWMonitorService
             {
                 Log.Error("Failed to get sensor data on device " + ip);
 
-                Mail mail = new Mail();
+                Mail mail = config.Email;
 
                 SmtpClient smtpClient = new SmtpClient(mail.STMP) 
                 {
                     Port = mail.Port,
                     EnableSsl = mail.SSL,
+                    UseDefaultCredentials = true
                 };
 
                 MailMessage message = new MailMessage();
@@ -107,14 +108,22 @@ namespace OSWMonitorService
 
                 foreach(string address in mail.Recipients)
                 {
-                    message.To.Add(new MailAddress(address));
+                    MailAddress email = new MailAddress(address);
+                    Log.Information("Sending email to " + email.Address);
+                    message.To.Add(email);
                 }
 
                 message.Subject = "OSW Sensor Offline";
                 message.Body = "[" + sensor.Name + " : " + sensor.IP + "] Sensor Offline";
 
-                smtpClient.Send(message);
-
+                try
+                {
+                    smtpClient.Send(message);
+                } catch(Exception ex)
+                {
+                    Log.Error(ex, "Email notification failed");
+                }
+                
                 sensor.IsOffline = true;
 
                 return sensor;

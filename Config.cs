@@ -48,12 +48,15 @@ namespace OSWMonitorService
 
                 config = new Config();
                 config.Sensors.Add(example);
+                config.Email.Recipients.Add("test1@example.com");
+                config.Email.Recipients.Add("test2@example.com");
 
                 File.WriteAllText(CONFIG, JsonConvert.SerializeObject(config, Formatting.Indented));
             }
             else
             {
                 config = JsonConvert.DeserializeObject<Config>(File.ReadAllText(CONFIG));
+                Console.WriteLine(string.Join(",", config.Email.Recipients.ToArray()));
             }
 
             return config;
@@ -112,7 +115,7 @@ namespace OSWMonitorService
             Port = 25;
             SSL = false;
             From = "example@email.com";
-            Recipients = new List<string>() { "test1@example.com", "test2@example.com" };
+            Recipients = new List<string>();
         }
     }
 }

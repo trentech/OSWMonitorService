@@ -56,7 +56,6 @@ namespace OSWMonitorService
             else
             {
                 config = JsonConvert.DeserializeObject<Config>(File.ReadAllText(CONFIG));
-                Console.WriteLine(string.Join(",", config.Email.Recipients.ToArray()));
             }
 
             return config;

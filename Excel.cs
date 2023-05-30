@@ -100,8 +100,7 @@ namespace OSWMonitorService
                 cell.CellStyle = style;
                 cell.SetCellValue("NA");
 
-                row.CreateCell(4).SetCellValue(DateOnly.FromDateTime(DateTime.Now).ToString());
-                row.CreateCell(5).SetCellValue(TimeOnly.FromDateTime(DateTime.Now).ToString());
+                row.CreateCell(4).SetCellValue(DateTime.Now.ToString());
             }
             else
             {
@@ -109,8 +108,7 @@ namespace OSWMonitorService
                 row.CreateCell(1).SetCellValue(sensor.Humidity);
                 row.CreateCell(2).SetCellValue(sensor.DewPoint);
                 row.CreateCell(3).SetCellValue(sensor.IsRecording);
-                row.CreateCell(4).SetCellValue(sensor.Date.ToString());
-                row.CreateCell(5).SetCellValue(sensor.Time.ToString());
+                row.CreateCell(4).SetCellValue(sensor.DateTime.ToString());
             }
         }
 
@@ -165,11 +163,7 @@ namespace OSWMonitorService
 
             cell = row.CreateCell(4);
             cell.CellStyle = style;
-            cell.SetCellValue("Date");
-
-            cell = row.CreateCell(5);
-            cell.CellStyle = style;
-            cell.SetCellValue("Time");
+            cell.SetCellValue("DateTime");
 
             return sheet;
         }

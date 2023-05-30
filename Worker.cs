@@ -137,9 +137,7 @@ namespace OSWMonitorService
 
             string[] lines = data.Split(new string[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
 
-            string[] date = lines[0].Substring(2).Split(" ");
-            sensor.Time = TimeOnly.Parse(date[3].PadLeft(2, '0') + ":" + date[4].PadLeft(2, '0') + ":" + date[5].PadLeft(2, '0'));
-            sensor.Date = DateOnly.Parse((Int32.Parse(date[1]) - 1) + "-" + date[2] + "-" + date[0]);
+            sensor.DateTime = DateTime.Now;
 
             string[] temp = lines[1].Substring(2).Split(" ");
             sensor.Temperature = Double.Parse(temp[temp.Length - 2]);

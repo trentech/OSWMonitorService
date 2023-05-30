@@ -62,7 +62,7 @@ namespace OSWMonitorService
                 command.Parameters.AddWithValue("@Humidity", sensor.Humidity);
                 command.Parameters.AddWithValue("@Dew", sensor.DewPoint);
                 command.Parameters.AddWithValue("@Recording", sensor.IsRecording);
-                command.Parameters.AddWithValue("@DateTime", GetDateTime(sensor.Date.ToDateTime(sensor.Time)));
+                command.Parameters.AddWithValue("@DateTime", GetDateTime(sensor.DateTime));
 
                 command.ExecuteNonQuery();
 

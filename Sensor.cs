@@ -13,9 +13,7 @@ namespace OSWMonitorService
         [JsonProperty]
         public bool Skip { get; set; } = false;
         [JsonIgnore]
-        public TimeOnly Time { get; set; } = TimeOnly.FromDateTime(DateTime.Now);
-        [JsonIgnore]
-        public DateOnly Date { get; set; } = DateOnly.FromDateTime(DateTime.Now);
+        public DateTime DateTime { get; set; } = DateTime.Now;
         [JsonIgnore]
         public double Temperature { get; set; }
         [JsonIgnore]

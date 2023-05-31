@@ -1,6 +1,4 @@
 ﻿using Newtonsoft.Json;
-using System.Reflection.PortableExecutable;
-using static System.Environment;
 
 namespace OSWMonitorService
 {

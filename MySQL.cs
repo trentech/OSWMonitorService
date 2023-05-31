@@ -1,6 +1,5 @@
 ﻿using MySql.Data.MySqlClient;
 using Serilog;
-using System.ComponentModel.DataAnnotations;
 
 namespace OSWMonitorService
 {

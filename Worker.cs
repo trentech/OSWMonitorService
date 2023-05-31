@@ -1,7 +1,5 @@
 using HtmlAgilityPack;
-using Microsoft.CodeAnalysis;
 using Serilog;
-using System;
 using System.Net;
 using System.Net.Mail;
 
@@ -199,7 +197,7 @@ namespace OSWMonitorService
 #pragma warning disable SYSLIB0014 // Type or member is obsolete
                 HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
 #pragma warning restore SYSLIB0014 // Type or member is obsolete
-                request.Timeout = 3000;
+                request.Timeout = 10000;
                 request.AllowAutoRedirect = false;
                 request.Method = "GET";
 

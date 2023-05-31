@@ -112,7 +112,7 @@ namespace OSWMonitorService
 
             cell = row.CreateCell(3);
             cell.CellStyle = stringStyle;
-            cell.SetCellValue(sensor.IsOffline ? "OFFLINE" : sensor.IsRecording.ToString());
+            cell.SetCellValue(sensor.IsOnline);
 
             cell = row.CreateCell(4);
             cell.CellStyle = dateStyle;
@@ -166,7 +166,7 @@ namespace OSWMonitorService
 
             cell = row.CreateCell(3);
             cell.CellStyle = style;
-            cell.SetCellValue("Recording");
+            cell.SetCellValue("Online");
 
             cell = row.CreateCell(4);
             cell.CellStyle = style;

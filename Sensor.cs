@@ -19,9 +19,7 @@ namespace OSWMonitorService
         [JsonIgnore]
         public double DewPoint { get; set; } = 0;
         [JsonIgnore]
-        public bool IsRecording { get; set; } = false;
-        [JsonIgnore]
-        public bool IsOffline { get; set; } = false;
+        public bool IsOnline { get; set; } = true;
         public Sensor(string name, string ip)
         {
             Name = name;

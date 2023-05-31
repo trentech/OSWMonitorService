@@ -39,7 +39,7 @@ namespace OSWMonitorService
                         Log.Information("Getting sensor data on device " + sensor.IP);
                         Sensor s = GetSensor(config, sensor.Name, sensor.IP);
 
-                        if(s.IsOffline)
+                        if(!s.IsOnline)
                         {
                             OfflineSensors.Add(s);
                         }
@@ -93,15 +93,14 @@ namespace OSWMonitorService
                 if (new Random().Next(0, 100) < 10) //10%
                 {
                     Log.Error("[DEVMODE]: Failed to get sensor data on device " + ip);
-                    sensor.IsOffline = true;
+                    sensor.IsOnline = false;
                 }
                 else
                 {
                     sensor.Temperature = Math.Round(new Random().NextDouble() * (100 - 30) + 30, 2);
                     sensor.Humidity = Math.Round(new Random().NextDouble() * (60 - 30) + 30, 2);
                     sensor.DewPoint = Math.Round(new Random().NextDouble() * (100 - 30) + 30, 2);
-                    sensor.IsOffline = false;
-                    sensor.IsRecording = true;
+                    sensor.IsOnline = true;
                 }
 
                 return sensor;
@@ -113,7 +112,7 @@ namespace OSWMonitorService
             {
                 Log.Error("Failed to get sensor data on device " + ip);
 
-                sensor.IsOffline = true;
+                sensor.IsOnline = false;
 
                 return sensor;
             }
@@ -136,9 +135,6 @@ namespace OSWMonitorService
 
             string[] dew = lines[3].Substring(2).Split(" ");
             sensor.DewPoint = Double.Parse(dew[dew.Length - 2]);
-
-            string recordUnformatted = lines[4].Substring(2).Split(" ")[1];
-            sensor.IsRecording = recordUnformatted.Equals("ON") ? true : false;
 
             return sensor;
         }

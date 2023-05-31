@@ -56,12 +56,12 @@ namespace OSWMonitorService
                     return;
                 }
 
-                OleDbCommand command = new OleDbCommand("INSERT INTO " + tableName + " ([Temperature], [Humidity], [Dew], [Recording], [DateTime]) VALUES (?,?,?,?,?)", db);
+                OleDbCommand command = new OleDbCommand("INSERT INTO " + tableName + " ([Temperature], [Humidity], [Dew], [Online], [DateTime]) VALUES (?,?,?,?,?)", db);
 
                 command.Parameters.AddWithValue("@Temperature" ,sensor.Temperature);
                 command.Parameters.AddWithValue("@Humidity", sensor.Humidity);
                 command.Parameters.AddWithValue("@Dew", sensor.DewPoint);
-                command.Parameters.AddWithValue("@Recording", sensor.IsRecording);
+                command.Parameters.AddWithValue("@Online", sensor.IsOnline);
                 command.Parameters.AddWithValue("@DateTime", GetDateTime(sensor.DateTime));
 
                 command.ExecuteNonQuery();
@@ -124,7 +124,7 @@ namespace OSWMonitorService
                     return;
                 }
 
-                OleDbCommand command = new OleDbCommand("CREATE TABLE " + tableName + " ([Temperature] DOUBLE, [Humidity] DOUBLE, [Dew] DOUBLE, [Recording] BIT, [DateTime] DateTime)", db);
+                OleDbCommand command = new OleDbCommand("CREATE TABLE " + tableName + " ([Temperature] DOUBLE, [Humidity] DOUBLE, [Dew] DOUBLE, [Online] BIT, [DateTime] DateTime)", db);
 
                 command.ExecuteNonQuery();
                 db.Close();

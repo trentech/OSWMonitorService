@@ -54,7 +54,15 @@ namespace OSWMonitorService
 
                 if(OfflineSensors.Count > 0)
                 {
-                    SendEmail(config.Email, OfflineSensors);
+                    string subject = "OSW Sensor Offline";
+                    string body = "The following sensors are offline:" + Environment.NewLine;
+
+                    foreach (Sensor sensor in OfflineSensors)
+                    {
+                        body = body + Environment.NewLine + sensor.Name + " - " + sensor.IP;
+                    }
+
+                    Utils.SendEmail(config.Email, subject, body);
                 }
 
                 if(config.DataType.Type.Equals(DataType.DataTypes.EXCEL))
@@ -133,46 +141,6 @@ namespace OSWMonitorService
             sensor.IsRecording = recordUnformatted.Equals("ON") ? true : false;
 
             return sensor;
-        }
-
-        private void SendEmail(Mail mail, List<Sensor> OfflineSensors)
-        {
-            SmtpClient smtpClient = new SmtpClient(mail.STMP)
-            {
-                Port = mail.Port,
-                EnableSsl = mail.SSL,
-                UseDefaultCredentials = true
-            };
-
-            MailMessage message = new MailMessage();
-            message.From = new MailAddress(mail.From);
-
-            foreach (string address in mail.Recipients)
-            {
-                MailAddress email = new MailAddress(address);
-                Log.Information("Sending email to " + email.Address);
-                message.To.Add(email);
-            }
-
-            message.Subject = "OSW Sensor Offline";
-
-            string body = "The following sensors are offline:" + Environment.NewLine;
-
-            foreach(Sensor sensor in OfflineSensors)
-            {
-                body = body + Environment.NewLine + sensor.Name + " - " + sensor.IP;
-            }
-
-            message.Body = body;
-
-            try
-            {
-                smtpClient.Send(message);
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex, "Email notification failed");
-            }
         }
 
         private void InitDevMode()

@@ -13,11 +13,11 @@ namespace OSWMonitorService
         [JsonIgnore]
         public DateTime DateTime { get; set; } = DateTime.Now;
         [JsonIgnore]
-        public double Temperature { get; set; }
+        public double Temperature { get; set; } = 0;
         [JsonIgnore]
-        public double Humidity { get; set; }
+        public double Humidity { get; set; } = 0;
         [JsonIgnore]
-        public double DewPoint { get; set; }
+        public double DewPoint { get; set; } = 0;
         [JsonIgnore]
         public bool IsRecording { get; set; } = false;
         [JsonIgnore]

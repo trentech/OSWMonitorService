@@ -1,4 +1,5 @@
-﻿using NPOI.HSSF.Util;
+﻿using NPOI.HSSF.UserModel;
+using NPOI.HSSF.Util;
 using NPOI.SS.UserModel;
 using NPOI.SS.Util;
 using NPOI.XSSF.UserModel;
@@ -35,6 +36,7 @@ namespace OSWMonitorService
             {
                 CreateSpreadSheet(tempFile, config);
             }
+
             XSSFWorkbook workbook;
 
             while (IsFileLocked(tempFile))
@@ -48,6 +50,7 @@ namespace OSWMonitorService
                 workbook = new XSSFWorkbook(stream);
                 stream.Close();
             }
+
             foreach (Sensor sensor in config.Sensors)
             {
                 if (sensor.Skip)
@@ -78,44 +81,48 @@ namespace OSWMonitorService
 
             IRow row = sheet.CreateRow(sheet.LastRowNum + 1);
 
-            if (sensor.IsOffline)
-            {
-                ICellStyle style = workbook.CreateCellStyle();
-                style.FillForegroundColor = HSSFColor.Red.Index;
-                style.FillPattern = FillPattern.SolidForeground;
+            ICellStyle amountStyle = workbook.CreateCellStyle();
+            amountStyle.Alignment = HorizontalAlignment.Left;
+            amountStyle.DataFormat = HSSFDataFormat.GetBuiltinFormat("0.00");
 
-                ICell cell = row.CreateCell(0);
-                cell.CellStyle = style;
-                cell.SetCellValue("NA");
+            ICellStyle percentStyle = workbook.CreateCellStyle();
+            percentStyle.Alignment = HorizontalAlignment.Left;
+            percentStyle.DataFormat = HSSFDataFormat.GetBuiltinFormat("0.00%");
 
-                cell = row.CreateCell(1);
-                cell.CellStyle = style;
-                cell.SetCellValue("NA");
+            ICellStyle dateStyle = workbook.CreateCellStyle();
+            dateStyle.Alignment = HorizontalAlignment.Left;
+            dateStyle.DataFormat = workbook.CreateDataFormat().GetFormat("MM/dd/yyyy hh:mm AM/PM");
 
-                cell = row.CreateCell(2);
-                cell.CellStyle = style;
-                cell.SetCellValue("NA");
+            ICellStyle stringStyle = workbook.CreateCellStyle();
+            stringStyle.Alignment = HorizontalAlignment.Left;
+            stringStyle.DataFormat = HSSFDataFormat.GetBuiltinFormat("TEXT");
 
-                cell = row.CreateCell(3);
-                cell.CellStyle = style;
-                cell.SetCellValue("NA");
+            ICell cell = row.CreateCell(0);
 
-                row.CreateCell(4).SetCellValue(DateTime.Now.ToString());
-            }
-            else
-            {
-                row.CreateCell(0).SetCellValue(sensor.Temperature);
-                row.CreateCell(1).SetCellValue(sensor.Humidity);
-                row.CreateCell(2).SetCellValue(sensor.DewPoint);
-                row.CreateCell(3).SetCellValue(sensor.IsRecording);
-                row.CreateCell(4).SetCellValue(sensor.DateTime.ToString());
-            }
+            cell.CellStyle = amountStyle;
+            cell.SetCellValue(sensor.Temperature);
+
+            cell = row.CreateCell(1);
+            cell.CellStyle = percentStyle;
+            cell.SetCellValue(sensor.Humidity / 100);
+
+            cell = row.CreateCell(2);
+            cell.CellStyle = amountStyle;
+            cell.SetCellValue(sensor.DewPoint);
+
+            cell = row.CreateCell(3);
+            cell.CellStyle = stringStyle;
+            cell.SetCellValue(sensor.IsOffline ? "OFFLINE" : sensor.IsRecording.ToString());
+
+            cell = row.CreateCell(4);
+            cell.CellStyle = dateStyle;
+            cell.SetCellValue(sensor.DateTime);
         }
 
         private ISheet CreateWorkSheet(XSSFWorkbook workbook, Sensor sensor)
         {
             ISheet sheet = workbook.CreateSheet(sensor.IP);
-            sheet.DefaultColumnWidth = 15;
+            sheet.DefaultColumnWidth = 20;
 
             IFont font = workbook.CreateFont();
             font.IsBold = true;
@@ -208,34 +215,10 @@ namespace OSWMonitorService
 
                             if (!config.DevMode)
                             {
-                                Mail mail = config.Email;
+                                string subject = "OSW Sensor File Locked. Timed Out";
+                                string body = "[" + destination + "] File has been locked for " + Math.Round(timeSpan.TotalMinutes, 2) + " Minutes and cannot be written to. Timed out.";
 
-                                SmtpClient smtpClient = new SmtpClient(mail.STMP)
-                                {
-                                    Port = mail.Port,
-                                    EnableSsl = mail.SSL,
-                                    UseDefaultCredentials = true
-                                };
-
-                                MailMessage message = new MailMessage();
-                                message.From = new MailAddress(mail.From);
-
-                                foreach (string address in mail.Recipients)
-                                {
-                                    message.To.Add(new MailAddress(address));
-                                }
-
-                                message.Subject = "OSW Sensor File Locked. Timed Out";
-                                message.Body = "[" + destination + "]: File has been locked for " + Math.Round(timeSpan.TotalMinutes, 2) + " Minutes and cannot be written to. Timed out.";
-
-                                try
-                                {
-                                    smtpClient.Send(message);
-                                }
-                                catch (Exception ex)
-                                {
-                                    Log.Error("Email notification failed", ex);
-                                }
+                                Utils.SendEmail(config.Email, subject, body);
                             }
 
                             stopWatch.Stop();
@@ -248,26 +231,10 @@ namespace OSWMonitorService
 
                             if (!config.DevMode)
                             {
-                                Mail mail = new Mail();
+                                string subject = "OSW Sensor File Locked";
+                                string body = "[" + destination + "] File has been locked for " + Math.Round(timeSpan.TotalMinutes, 2) + " Minutes and cannot be written to.";
 
-                                SmtpClient smtpClient = new SmtpClient(mail.STMP)
-                                {
-                                    Port = mail.Port,
-                                    EnableSsl = mail.SSL,
-                                };
-
-                                MailMessage message = new MailMessage();
-                                message.From = new MailAddress(mail.From);
-
-                                foreach (string address in mail.Recipients)
-                                {
-                                    message.To.Add(new MailAddress(address));
-                                }
-
-                                message.Subject = "OSW Sensor File Locked";
-                                message.Body = "[" + destination + "] File has been locked for " + Math.Round(timeSpan.TotalMinutes, 2) + " Minutes and cannot be written to.";
-
-                                smtpClient.Send(message);
+                                Utils.SendEmail(config.Email, subject, body);
                             }
                         }
                         else

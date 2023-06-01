@@ -28,59 +28,76 @@ namespace OSWMonitorService
             while (!stoppingToken.IsCancellationRequested)
             {
                 Config config = Config.Get();
-                List<Sensor> list = new List<Sensor>(config.Sensors);
-                List<Sensor> OfflineSensors = new List<Sensor>();
-                config.Sensors.Clear();
 
-                foreach (Sensor sensor in list)
+                int delay = config.Delay > 60 ? 60 : config.Delay;
+                int minute = 0;
+                int current = DateTime.Now.Minute;
+
+                for (int i = 0; i < (60 / delay); i++)
                 {
-                    if (!sensor.Skip)
-                    {
-                        Log.Information("Getting sensor data on device " + sensor.IP);
-                        Sensor s = GetSensor(config, sensor.Name, sensor.IP);
+                    minute = minute + delay;
+                    minute = minute == 60 ? 0 : minute;
 
-                        if(!s.IsOnline)
-                        {
-                            OfflineSensors.Add(s);
-                        }
-
-                        config.Sensors.Add(s);
-                    }
-                    else
+                    if (minute == current)
                     {
-                        Log.Information("Skipping device " + sensor.IP);
+                        Run(config);
                     }
                 }
 
-                if(OfflineSensors.Count > 0)
-                {
-                    string subject = "OSW Sensor Offline";
-                    string body = "The following sensors are offline:" + Environment.NewLine;
+                await Task.Delay((60 - DateTime.Now.Second) * 1000 - DateTime.Now.Millisecond, stoppingToken);
+            }
+        }
 
-                    foreach (Sensor sensor in OfflineSensors)
+        private void Run(Config config)
+        {
+            List<Sensor> list = new List<Sensor>(config.Sensors);
+            List<Sensor> OfflineSensors = new List<Sensor>();
+            config.Sensors.Clear();
+
+            foreach (Sensor sensor in list)
+            {
+                if (!sensor.Skip)
+                {
+                    Log.Information("Getting sensor data on device " + sensor.IP);
+                    Sensor s = GetSensor(config, sensor.Name, sensor.IP);
+
+                    if (!s.IsOnline)
                     {
-                        body = body + Environment.NewLine + sensor.Name + " - " + sensor.IP;
+                        OfflineSensors.Add(s);
                     }
 
-                    Utils.SendEmail(config.Email, subject, body);
+                    config.Sensors.Add(s);
+                }
+                else
+                {
+                    Log.Information("Skipping device " + sensor.IP);
+                }
+            }
+
+            if (OfflineSensors.Count > 0)
+            {
+                string subject = "OSW Sensor Offline";
+                string body = "The following sensors are offline:" + Environment.NewLine;
+
+                foreach (Sensor sensor in OfflineSensors)
+                {
+                    body = body + Environment.NewLine + sensor.Name + " - " + sensor.IP;
                 }
 
-                if(config.DataType.Type.Equals(DataType.DataTypes.EXCEL))
-                {
-                    new Excel(config).AddAll();
-                }
-                else if (config.DataType.Type.Equals(DataType.DataTypes.ACCESS))
-                {
-                    new Access(config).AddAll();
-                }
-                else if (config.DataType.Type.Equals(DataType.DataTypes.MYSQL))
-                {
-                    new MySQL(config).AddAll();
-                }
+                Utils.SendEmail(config.Email, subject, body);
+            }
 
-                int delay = config.DevMode ? 6 : config.Delay;
-
-                await Task.Delay(1000 * 60 * delay, stoppingToken);  
+            if (config.DataType.Type.Equals(DataType.DataTypes.EXCEL))
+            {
+                new Excel(config).AddAll();
+            }
+            else if (config.DataType.Type.Equals(DataType.DataTypes.ACCESS))
+            {
+                new Access(config).AddAll();
+            }
+            else if (config.DataType.Type.Equals(DataType.DataTypes.MYSQL))
+            {
+                new MySQL(config).AddAll();
             }
         }
 

@@ -1,7 +1,6 @@
 using HtmlAgilityPack;
 using Serilog;
 using System.Net;
-using System.Net.Mail;
 
 namespace OSWMonitorService
 {
@@ -12,7 +11,6 @@ namespace OSWMonitorService
         {
             Log.Information("Starting OSW Monitoring Service.");
 
-            InitDevMode();
             return base.StartAsync(cancellationToken);
         }
 
@@ -25,32 +23,38 @@ namespace OSWMonitorService
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            Config config = Config.Get();
+            
             while (!stoppingToken.IsCancellationRequested)
             {
-                Config config = Config.Get();
-
                 int delay = config.Delay > 60 ? 60 : config.Delay;
                 int minute = 0;
                 int current = DateTime.Now.Minute;
+                bool run = false;
 
                 for (int i = 0; i < (60 / delay); i++)
                 {
                     minute = minute + delay;
                     minute = minute == 60 ? 0 : minute;
 
-                    if (minute == current)
-                    {
-                        Run(config);
-                    }
+                    if (minute == current) run = true;
                 }
 
-                await Task.Delay((60 - DateTime.Now.Second) * 1000 - DateTime.Now.Millisecond, stoppingToken);
+                if (run)
+                {
+                    Run(config);
+                    config = Config.Get();
+                    delay = config.Delay > 60 ? 60 : config.Delay;
+                }
+
+                DateTime now = DateTime.Now;
+                await Task.Delay((((now.Second > 30 ? 120 : 60) - now.Second) * 1000 - now.Millisecond) + 500, stoppingToken);
             }
         }
 
         private void Run(Config config)
         {
-            List<Sensor> list = new List<Sensor>(config.Sensors);
+            List<Sensor> list = config.DevMode ? GetDevSensors() : new List<Sensor>(config.Sensors);
             List<Sensor> OfflineSensors = new List<Sensor>();
             config.Sensors.Clear();
 
@@ -84,7 +88,10 @@ namespace OSWMonitorService
                     body = body + Environment.NewLine + sensor.Name + " - " + sensor.IP;
                 }
 
-                Utils.SendEmail(config.Email, subject, body);
+                if(!config.DevMode)
+                {
+                    Utils.SendEmail(config.Email, subject, body);
+                }
             }
 
             if (config.DataType.Type.Equals(DataType.DataTypes.EXCEL))
@@ -107,18 +114,10 @@ namespace OSWMonitorService
 
             if(config.DevMode)
             {
-                if (new Random().Next(0, 100) < 10) //10%
-                {
-                    Log.Error("[DEVMODE]: Failed to get sensor data on device " + ip);
-                    sensor.IsOnline = false;
-                }
-                else
-                {
-                    sensor.Temperature = Math.Round(new Random().NextDouble() * (100 - 30) + 30, 2);
-                    sensor.Humidity = Math.Round(new Random().NextDouble() * (60 - 30) + 30, 2);
-                    sensor.DewPoint = Math.Round(new Random().NextDouble() * (100 - 30) + 30, 2);
-                    sensor.IsOnline = true;
-                }
+                sensor.Temperature = Math.Round(new Random().NextDouble() * (100 - 30) + 30, 2);
+                sensor.Humidity = Math.Round(new Random().NextDouble() * (60 - 30) + 30, 2);
+                sensor.DewPoint = Math.Round(new Random().NextDouble() * (100 - 30) + 30, 2);
+                sensor.IsOnline = true;
 
                 return sensor;
             }
@@ -156,19 +155,18 @@ namespace OSWMonitorService
             return sensor;
         }
 
-        private void InitDevMode()
+        private List<Sensor> GetDevSensors()
         {
-            Config config = Config.Get();
+            List<Sensor> list = new List<Sensor>();
 
-            if(config.DevMode)
+            for(int i = 1; i < 10; i++)
             {
-                for(int i = 1; i < 10; i++)
-                {
-                    Sensor sensor = new Sensor("Test" + i, "10.0.0." + i);
-                    sensor.Skip = false;
-                    config.Sensors.Add(sensor);
-                }
+                Sensor sensor = new Sensor("Test" + i, "10.0.0." + i);
+                sensor.Skip = false;
+                list.Add(sensor);
             }
+
+            return list;
         }
 
         private bool IsOnline(string url)

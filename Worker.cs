@@ -176,6 +176,7 @@ namespace OSWMonitorService
 
                     if (timeSpan.TotalSeconds >= (delay * 60))
                     {
+                        Log.Error("[" + sensor.IP + "] Sensor still offline. Timing out");
                         break;
                     }
                     else
@@ -184,6 +185,7 @@ namespace OSWMonitorService
 
                         if (IsOnline(url))
                         {
+                            Log.Information("[" + sensor.IP + "] Sensor back online.");
                             sensor.IsOnline = true;
 
                             string subject = "OSW Sensor Online";
@@ -193,6 +195,9 @@ namespace OSWMonitorService
                             {
                                 Utils.SendEmail(config.Email, subject, body);
                             }
+                        } else
+                        {
+                            Log.Warning("[" + sensor.IP + "] Sensor still offline.");
                         }
                     }
                 }

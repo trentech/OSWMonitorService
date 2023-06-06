@@ -1,6 +1,8 @@
 using HtmlAgilityPack;
 using Serilog;
+using System.Diagnostics;
 using System.Net;
+using static Org.BouncyCastle.Math.EC.ECCurve;
 
 namespace OSWMonitorService
 {
@@ -68,6 +70,7 @@ namespace OSWMonitorService
                     if (!s.IsOnline)
                     {
                         OfflineSensors.Add(s);
+                        CheckOnline(s);
                     }
 
                     config.Sensors.Add(s);
@@ -153,6 +156,49 @@ namespace OSWMonitorService
             sensor.DewPoint = Double.Parse(dew[dew.Length - 2]);
 
             return sensor;
+        }
+
+        private async void CheckOnline(Sensor sensor)
+        {
+            Stopwatch stopWatch = new Stopwatch();
+            stopWatch.Start();
+
+            await Task.Run(() => {
+
+                Config config = Config.Get();
+
+                while (!sensor.IsOnline)
+                {
+                    Thread.Sleep(30000);
+
+                    double delay = config.Delay;
+                    TimeSpan timeSpan = stopWatch.Elapsed;
+
+                    if (timeSpan.TotalSeconds >= (delay * 60))
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        var url = @"http://" + sensor.IP + "/postReadHtml?a=";
+
+                        if (IsOnline(url))
+                        {
+                            sensor.IsOnline = true;
+
+                            string subject = "OSW Sensor Online";
+                            string body = "The following sensor is back online:" + Environment.NewLine + Environment.NewLine + sensor.Name + " - " + sensor.IP;
+
+                            if (!config.DevMode)
+                            {
+                                Utils.SendEmail(config.Email, subject, body);
+                            }
+                        }
+                    }
+                }
+
+                stopWatch.Stop();
+            });
         }
 
         private List<Sensor> GetDevSensors()

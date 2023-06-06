@@ -196,8 +196,6 @@ namespace OSWMonitorService
             Stopwatch stopWatch = new Stopwatch();
             stopWatch.Start();
 
-            TimeOnly time = TimeOnly.FromDateTime(DateTime.Now);
-
             await Task.Run(() => {
                 if (File.Exists(destination))
                 {
@@ -221,8 +219,7 @@ namespace OSWMonitorService
                                 Utils.SendEmail(config.Email, subject, body);
                             }
 
-                            stopWatch.Stop();
-                            return;
+                            break;
                         }
                         else if (timeSpan.TotalSeconds >= (check * 60))
                         {
@@ -245,6 +242,7 @@ namespace OSWMonitorService
                         Thread.Sleep(config.DevMode ? 10000 : 30000);
                     }
 
+                    stopWatch.Stop();
                     File.Delete(destination);
                 }
 

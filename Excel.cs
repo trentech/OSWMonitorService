@@ -5,7 +5,6 @@ using NPOI.SS.Util;
 using NPOI.XSSF.UserModel;
 using Serilog;
 using System.Diagnostics;
-using System.Net.Mail;
 
 namespace OSWMonitorService
 {
@@ -73,50 +72,61 @@ namespace OSWMonitorService
         public void AddEntry(XSSFWorkbook workbook, Sensor sensor)
         {
             ISheet sheet = workbook.GetSheet(sensor.IP);
-            
-            if(sheet == null)
+
+            if (sheet == null)
             {
                 sheet = CreateWorkSheet(workbook, sensor);
             }
 
             IRow row = sheet.CreateRow(sheet.LastRowNum + 1);
 
-            ICellStyle amountStyle = workbook.CreateCellStyle();
-            amountStyle.Alignment = HorizontalAlignment.Left;
-            amountStyle.DataFormat = HSSFDataFormat.GetBuiltinFormat("0.00");
+            ICell tempCell = row.CreateCell(0);
+            ICell humidCell = row.CreateCell(1);
+            ICell dewCell = row.CreateCell(2);
+            ICell onlineCell = row.CreateCell(3);
+            ICell dateCell = row.CreateCell(4);
 
-            ICellStyle percentStyle = workbook.CreateCellStyle();
-            percentStyle.Alignment = HorizontalAlignment.Left;
-            percentStyle.DataFormat = HSSFDataFormat.GetBuiltinFormat("0.00%");
+            if (sheet.LastRowNum == 2)
+            {
+                ICellStyle amountStyle = workbook.CreateCellStyle();
+                amountStyle.Alignment = HorizontalAlignment.Left;
+                amountStyle.DataFormat = HSSFDataFormat.GetBuiltinFormat("0.00");
+                tempCell.CellStyle = amountStyle;
+                dewCell.CellStyle = amountStyle;
+                sheet.SetDefaultColumnStyle(0, amountStyle);
+                sheet.SetDefaultColumnStyle(1, amountStyle);
 
-            ICellStyle dateStyle = workbook.CreateCellStyle();
-            dateStyle.Alignment = HorizontalAlignment.Left;
-            dateStyle.DataFormat = workbook.CreateDataFormat().GetFormat("MM/dd/yyyy hh:mm AM/PM");
+                ICellStyle percentStyle = workbook.CreateCellStyle();
+                percentStyle.Alignment = HorizontalAlignment.Left;
+                percentStyle.DataFormat = HSSFDataFormat.GetBuiltinFormat("0.00%");
+                humidCell.CellStyle = percentStyle;
+                sheet.SetDefaultColumnStyle(2, percentStyle);
 
-            ICellStyle stringStyle = workbook.CreateCellStyle();
-            stringStyle.Alignment = HorizontalAlignment.Left;
-            stringStyle.DataFormat = HSSFDataFormat.GetBuiltinFormat("TEXT");
+                ICellStyle stringStyle = workbook.CreateCellStyle();
+                stringStyle.Alignment = HorizontalAlignment.Left;
+                stringStyle.DataFormat = HSSFDataFormat.GetBuiltinFormat("TEXT");
+                onlineCell.CellStyle = stringStyle;
+                sheet.SetDefaultColumnStyle(3, stringStyle);
 
-            ICell cell = row.CreateCell(0);
+                ICellStyle dateStyle = workbook.CreateCellStyle();
+                dateStyle.Alignment = HorizontalAlignment.Left;
+                dateStyle.DataFormat = workbook.CreateDataFormat().GetFormat("MM/dd/yyyy hh:mm AM/PM");
+                dateCell.CellStyle = dateStyle;
+                sheet.SetDefaultColumnStyle(4, dateStyle);
+            } else 
+            {
+                tempCell.CellStyle = sheet.GetRow(sheet.LastRowNum - 1).GetCell(0).CellStyle;
+                humidCell.CellStyle = sheet.GetRow(sheet.LastRowNum - 1).GetCell(1).CellStyle;
+                dewCell.CellStyle = sheet.GetRow(sheet.LastRowNum - 1).GetCell(2).CellStyle;
+                onlineCell.CellStyle = sheet.GetRow(sheet.LastRowNum - 1).GetCell(3).CellStyle;
+                dateCell.CellStyle = sheet.GetRow(sheet.LastRowNum - 1).GetCell(4).CellStyle;
+            }
 
-            cell.CellStyle = amountStyle;
-            cell.SetCellValue(sensor.Temperature);
-
-            cell = row.CreateCell(1);
-            cell.CellStyle = percentStyle;
-            cell.SetCellValue(sensor.Humidity / 100);
-
-            cell = row.CreateCell(2);
-            cell.CellStyle = amountStyle;
-            cell.SetCellValue(sensor.DewPoint);
-
-            cell = row.CreateCell(3);
-            cell.CellStyle = stringStyle;
-            cell.SetCellValue(sensor.IsOnline);
-
-            cell = row.CreateCell(4);
-            cell.CellStyle = dateStyle;
-            cell.SetCellValue(sensor.DateTime);
+            tempCell.SetCellValue(sensor.Temperature);
+            humidCell.SetCellValue(sensor.Humidity / 100);
+            dewCell.SetCellValue(sensor.DewPoint);
+            onlineCell.SetCellValue(sensor.IsOnline);
+            dateCell.SetCellValue(sensor.DateTime);
         }
 
         private ISheet CreateWorkSheet(XSSFWorkbook workbook, Sensor sensor)

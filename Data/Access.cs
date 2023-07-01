@@ -19,11 +19,6 @@ namespace OSWMonitorService.DataTypes
         {
             string dbFile = Path.Combine(config.DataType.Path, config.DataType.Name) + ".accdb";
 
-            if (!File.Exists(dbFile))
-            {
-                File.WriteAllBytes(dbFile, Resources.database);
-            }
-
             if (!TableExists(sensor))
             {
                 CreateTable(sensor);

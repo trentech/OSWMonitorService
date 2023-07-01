@@ -7,7 +7,7 @@ namespace OSWMonitorService.JSON
     {
         public enum DataTypes
         {
-            MYSQL, EXCEL, ACCESS
+            MYSQL, ACCESS
         }
 
         [JsonConverter(typeof(StringEnumConverter))]
@@ -23,7 +23,7 @@ namespace OSWMonitorService.JSON
 
         public DataType()
         {
-            Type = DataTypes.EXCEL;
+            Type = DataTypes.ACCESS;
             Path = Config.PATH;
             Name = "database"; // EXCLUDE EXTENSION
             Username = "root";

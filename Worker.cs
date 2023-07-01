@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Net;
 using OSWMonitorService.DataTypes;
 using OSWMonitorService.JSON;
+using OSWMonitorService.Properties;
 
 namespace OSWMonitorService
 {
@@ -17,17 +18,26 @@ namespace OSWMonitorService
         {
             Log.Information("Starting OSW Monitoring Service.");
 
-            for (int i = 1; i < 10; i++)
-            {
-                Sensor sensor = new Sensor("Test" + i, "10.0.0." + i);
-                sensor.Skip = false;
+            Config config = Config.Get();
 
+            foreach(Sensor sensor in config.Sensors)
+            {
                 if (new Random().Next(100) < 5)
                 {
                     sensor.IsOnline = false;
                 }
 
                 devSensors.Add(sensor);
+            }
+
+            if (config.DataType.Type.Equals(DataType.DataTypes.ACCESS))
+            {
+                string dbFile = Path.Combine(config.DataType.Path, config.DataType.Name) + ".accdb";
+
+                if (!File.Exists(dbFile))
+                {
+                    File.WriteAllBytes(dbFile, Resources.database);
+                }
             }
 
             return base.StartAsync(cancellationToken);
@@ -103,7 +113,7 @@ namespace OSWMonitorService
 
                             offlineSensors.TryAdd(s.IP, s.IP);
 
-                            Utils.SendEmail(config.Email, s.Recipients, "[" + s.Name + "] Sensor Alarm - Connection Timeout", "Name: " + s.Name + Environment.NewLine + "IP: " + s.IP + Environment.NewLine + "Online: " + s.IsOnline, config.DevMode);
+                            Utils.SendEmail(config.Email, s.Recipients, "[" + s.Name + "] Sensor Alarm - Connection Timeout", "Name: " + s.Name + Environment.NewLine + "IP: " + s.IP + Environment.NewLine + "Online: " + s.IsOnline);
 
                             stopWatch.Stop();
                             return;
@@ -122,7 +132,7 @@ namespace OSWMonitorService
 
                         offlineSensors.TryRemove(s.IP, out string retrievedValue);
 
-                        Utils.SendEmail(config.Email, s.Recipients, "[" + s.Name + "] Sensor Alarm - Online", "Name: " + s.Name + Environment.NewLine + "IP: " + s.IP + Environment.NewLine + "Online: " + s.IsOnline, config.DevMode);
+                        Utils.SendEmail(config.Email, s.Recipients, "[" + s.Name + "] Sensor Alarm - Online", "Name: " + s.Name + Environment.NewLine + "IP: " + s.IP + Environment.NewLine + "Online: " + s.IsOnline);
                     }
 
                     if (config.DataType.Type.Equals(DataType.DataTypes.ACCESS))
@@ -143,7 +153,7 @@ namespace OSWMonitorService
                         Log.Warning("[" + s.IP + "] Humidity Threshold Reached!");
 
                         Utils.SendEmail(config.Email, s.Recipients, "[" + s.Name + "] Sensor Alarm - Humidity Threshold Reached", "Name: " + s.Name + Environment.NewLine + "IP: " + s.IP + Environment.NewLine + "Temperature: " + s.Temperature 
-                            + Environment.NewLine + "Humidity: " + s.Humidity, config.DevMode);
+                            + Environment.NewLine + "Humidity: " + s.Humidity);
                     }
 
                     if (s.Temperature > s.TemperatureLimit)
@@ -151,7 +161,7 @@ namespace OSWMonitorService
                         Log.Warning("[" + s.IP + "] Temperature Threshold Reached!");
 
                         Utils.SendEmail(config.Email, s.Recipients, "[" + s.Name + "] Sensor Alarm - Temperature Threshold Reached", "Name: " + s.Name + Environment.NewLine + "IP: " + s.IP + Environment.NewLine + "Temperature: " + s.Temperature
-                            + Environment.NewLine + "Humidity: " + s.Humidity, config.DevMode);
+                            + Environment.NewLine + "Humidity: " + s.Humidity);
                     }
 
                     // 5 DEGREES APART
@@ -161,7 +171,7 @@ namespace OSWMonitorService
 
                     // THE DIDN"T ASK FOR THIS, BUT HAVE A FEELING THEY WILL. DISABLED FOR NOW.
                     //    Utils.SendEmail(config.Email, s.Recipients, "[" + s.Name + "] Sensor Alarm - Condensation Warning", "Name: " + s.Name + Environment.NewLine + "IP: " + s.IP + Environment.NewLine + "Temperature: " + s.Temperature
-                    //        + Environment.NewLine + "Humidity: " + s.Humidity + Environment.NewLine + "Dew Point: " + s.DewPoint, config.DevMode);
+                    //        + Environment.NewLine + "Humidity: " + s.Humidity + Environment.NewLine + "Dew Point: " + s.DewPoint);
                     }
                 });
             }
@@ -179,9 +189,9 @@ namespace OSWMonitorService
                     }
                 }
 
-                sensor.Temperature = Math.Round(new Random().NextDouble() * (100 - 30) + 30, 2);
-                sensor.Humidity = Math.Round(new Random().NextDouble() * (60 - 30) + 30, 2);
-                sensor.DewPoint = Math.Round(new Random().NextDouble() * (100 - 30) + 30, 2);
+                sensor.Temperature = Math.Round(new Random().NextDouble() * (105 - 30) + 30, 2);
+                sensor.Humidity = Math.Round(new Random().NextDouble() * (60 - 10) + 10, 2);
+                sensor.DewPoint = Math.Round(new Random().NextDouble() * (105 - 30) + 30, 2);
 
                 return sensor;
             }

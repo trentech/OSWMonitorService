@@ -11,13 +11,19 @@ namespace OSWMonitorService.JSON
         [JsonProperty]
         public bool SSL { get; set; }
         [JsonProperty]
+        public string Username { get; set; }
+        [JsonProperty]
+        public string Password { get; set; }
+        [JsonProperty]
         public string From { get; set; }
 
         public Mail()
         {
             STMP = "smtp.gmail.com";
-            Port = 25;
-            SSL = false;
+            Port = 587;
+            SSL = true;
+            Username = "";
+            Password = "";
             From = "example@email.com";
         }
     }

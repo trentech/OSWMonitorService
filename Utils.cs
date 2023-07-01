@@ -1,18 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Mail;
-using System.Net;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Net.Mail;
 using Serilog;
+using OSWMonitorService.JSON;
 
 namespace OSWMonitorService
 {
     internal class Utils
     {
-        public static void SendEmail(Mail mail, string subject, string body)
+        public static void SendEmail(Mail mail, List<string> recipients, string subject, string body, bool dev)
         {
+            if (recipients.Count == 0)
+            {
+                return;
+            }
+
             SmtpClient smtpClient = new SmtpClient(mail.STMP)
             {
                 Port = mail.Port,
@@ -23,23 +23,26 @@ namespace OSWMonitorService
             MailMessage message = new MailMessage();
             message.From = new MailAddress(mail.From);
 
-            foreach (string address in mail.Recipients)
+            foreach (string address in recipients)
             {
                 MailAddress email = new MailAddress(address);
-                Log.Information("Sending email to " + email.Address);
+                Log.Information("Sending email to " + email.Address + " Subject: " + subject);
                 message.To.Add(email);
             }
 
             message.Subject = subject;
             message.Body = body;
 
-            try
+            if (!dev)
             {
-                smtpClient.Send(message);
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex, "Email notification failed");
+                try
+                {
+                    smtpClient.Send(message);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "Email notification failed");
+                }
             }
         }
     }

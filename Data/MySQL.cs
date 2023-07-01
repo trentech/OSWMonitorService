@@ -1,28 +1,16 @@
 ﻿using MySql.Data.MySqlClient;
+using OSWMonitorService.JSON;
 using Serilog;
 
-namespace OSWMonitorService
+namespace OSWMonitorService.DataTypes
 {
-    public class MySQL
+    internal class MySQL
     {
         Config config;
 
         public MySQL(Config config)
         {
             this.config = config;
-        }
-
-        public void AddAll()
-        {
-            foreach (Sensor sensor in config.Sensors)
-            {
-                if (sensor.Skip)
-                {
-                    continue;
-                }
-
-                AddEntry(sensor);
-            }
         }
 
         public void AddEntry(Sensor sensor)
@@ -51,7 +39,7 @@ namespace OSWMonitorService
 
                 MySqlCommand command = new MySqlCommand("INSERT INTO " + tableName + " ([Temperature], [Humidity], [Dew], [Online], [DateTime]) VALUES (?,?,?,?,?)", db);
 
-                command.Parameters.AddWithValue("@Temperature" ,sensor.Temperature);
+                command.Parameters.AddWithValue("@Temperature", sensor.Temperature);
                 command.Parameters.AddWithValue("@Humidity", sensor.Humidity);
                 command.Parameters.AddWithValue("@Dew", sensor.DewPoint);
                 command.Parameters.AddWithValue("@Online", sensor.IsOnline);
@@ -63,7 +51,7 @@ namespace OSWMonitorService
 
         }
 
-        private bool TableExists(Sensor sensor)
+        public bool TableExists(Sensor sensor)
         {
             string tableName = sensor.IP.Replace(".", "");
             DataType dataType = config.DataType;
@@ -86,7 +74,7 @@ namespace OSWMonitorService
 
                 command.Prepare();
 
-                if (command.ExecuteReader().HasRows) 
+                if (command.ExecuteReader().HasRows)
                 {
                     return true;
                 }
@@ -95,7 +83,7 @@ namespace OSWMonitorService
             return false;
         }
 
-        private void CreateTable(Sensor sensor)
+        public void CreateTable(Sensor sensor)
         {
             string tableName = sensor.IP.Replace(".", "");
             DataType dataType = config.DataType;

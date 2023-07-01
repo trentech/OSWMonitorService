@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace OSWMonitorService
+namespace OSWMonitorService.JSON
 {
     public class Sensor
     {
@@ -10,6 +10,12 @@ namespace OSWMonitorService
         public string IP { get; set; }
         [JsonProperty]
         public bool Skip { get; set; } = false;
+        [JsonProperty]
+        public double TemperatureLimit { get; set; } = 0;
+        [JsonProperty]
+        public double HumidityLimit { get; set; } = 0;
+        [JsonProperty]
+        public List<string> Recipients { get; set; }
         [JsonIgnore]
         public DateTime DateTime { get; set; } = DateTime.Now;
         [JsonIgnore]
@@ -24,6 +30,7 @@ namespace OSWMonitorService
         {
             Name = name;
             IP = ip;
+            Recipients = new List<string>();
         }
     }
 }

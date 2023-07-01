@@ -1,30 +1,18 @@
-﻿using OSWMonitorService.Properties;
+﻿using OSWMonitorService.JSON;
+using OSWMonitorService.Properties;
 using Serilog;
 using System.Data;
 using System.Data.OleDb;
 
-namespace OSWMonitorService
+namespace OSWMonitorService.DataTypes
 {
-    public class Access
+    internal class Access
     {
         Config config;
 
-        public Access(Config config) 
+        public Access(Config config)
         {
             this.config = config;
-        }
-
-        public void AddAll()
-        {
-            foreach (Sensor sensor in config.Sensors)
-            {
-                if (sensor.Skip)
-                {
-                    continue;
-                }
-
-                AddEntry(sensor);
-            }
         }
 
         public void AddEntry(Sensor sensor)
@@ -58,7 +46,7 @@ namespace OSWMonitorService
 
                 OleDbCommand command = new OleDbCommand("INSERT INTO " + tableName + " ([Temperature], [Humidity], [Dew], [Online], [DateTime]) VALUES (?,?,?,?,?)", db);
 
-                command.Parameters.AddWithValue("@Temperature" ,sensor.Temperature);
+                command.Parameters.AddWithValue("@Temperature", sensor.Temperature);
                 command.Parameters.AddWithValue("@Humidity", sensor.Humidity);
                 command.Parameters.AddWithValue("@Dew", sensor.DewPoint);
                 command.Parameters.AddWithValue("@Online", sensor.IsOnline);
@@ -77,7 +65,7 @@ namespace OSWMonitorService
             }
         }
 
-        private bool TableExists(Sensor sensor)
+        public bool TableExists(Sensor sensor)
         {
             string dbFile = Path.Combine(config.DataType.Path, config.DataType.Name) + ".accdb";
             string tableName = sensor.IP.Replace(".", "");
@@ -106,7 +94,7 @@ namespace OSWMonitorService
             return false;
         }
 
-        private void CreateTable(Sensor sensor)
+        public void CreateTable(Sensor sensor)
         {
             string dbFile = Path.Combine(config.DataType.Path, config.DataType.Name) + ".accdb";
             string tableName = sensor.IP.Replace(".", "");

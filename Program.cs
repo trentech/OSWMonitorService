@@ -1,4 +1,5 @@
 using OSWMonitorService;
+using OSWMonitorService.JSON;
 using Serilog;
 using Serilog.Events;
 using Serilog.Sinks.SystemConsole.Themes;

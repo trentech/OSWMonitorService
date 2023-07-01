@@ -1,10 +1,8 @@
 ﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
 using static System.Environment;
 
-namespace OSWMonitorService
+namespace OSWMonitorService.JSON
 {
-
     public class Config
     {
         [JsonProperty]
@@ -45,11 +43,11 @@ namespace OSWMonitorService
             {
                 Sensor example = new Sensor("Example Sensor", "192.168.1.1");
                 example.Skip = true;
+                example.Recipients.Add("test1@example.com");
+                example.Recipients.Add("test2@example.com");
 
                 config = new Config();
                 config.Sensors.Add(example);
-                config.Email.Recipients.Add("test1@example.com");
-                config.Email.Recipients.Add("test2@example.com");
 
                 File.WriteAllText(CONFIG, JsonConvert.SerializeObject(config, Formatting.Indented));
             }
@@ -64,57 +62,6 @@ namespace OSWMonitorService
         public void Save()
         {
             File.WriteAllText(CONFIG, JsonConvert.SerializeObject(this, Formatting.Indented));
-        }
-    }
-
-    public class DataType
-    {
-        public enum DataTypes
-        {
-            MYSQL, EXCEL, ACCESS
-        }
-
-        [JsonConverter(typeof(StringEnumConverter))]
-        public DataTypes Type { get; set; }
-        [JsonProperty]
-        public string Path { get; set; }
-        [JsonProperty]
-        public string Name { get; set; }
-        [JsonProperty]
-        public string Username { get; set; }
-        [JsonProperty]
-        public string Password { get; set; }
-
-        public DataType()
-        {
-            this.Type = DataTypes.EXCEL;
-            this.Path = Config.PATH; 
-            this.Name = "database"; // EXCLUDE EXTENSION
-            this.Username = "root";
-            this.Password = "password";
-        }
-    }
-
-    public class Mail
-    {
-        [JsonProperty]
-        public string STMP { get; set; }
-        [JsonProperty]
-        public int Port { get; set; }
-        [JsonProperty]
-        public bool SSL { get; set; }
-        [JsonProperty]
-        public string From { get; set; }
-        [JsonProperty]
-        public List<string> Recipients { get; set; }
-
-        public Mail()
-        {
-            STMP = "smtp.gmail.com";
-            Port = 25;
-            SSL = false;
-            From = "example@email.com";
-            Recipients = new List<string>();
         }
     }
 }

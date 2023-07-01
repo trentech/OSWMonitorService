@@ -1,17 +1,34 @@
 using HtmlAgilityPack;
 using Serilog;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
-using static Org.BouncyCastle.Math.EC.ECCurve;
+using OSWMonitorService.DataTypes;
+using OSWMonitorService.JSON;
 
 namespace OSWMonitorService
 {
     public class Worker : BackgroundService
     {
+        private List<Sensor> devSensors = new List<Sensor>();
+        private ConcurrentDictionary<string, string> offlineSensors = new ConcurrentDictionary<string,string>();
 
         public override Task StartAsync(CancellationToken cancellationToken)
         {
             Log.Information("Starting OSW Monitoring Service.");
+
+            for (int i = 1; i < 10; i++)
+            {
+                Sensor sensor = new Sensor("Test" + i, "10.0.0." + i);
+                sensor.Skip = false;
+
+                if (new Random().Next(100) < 5)
+                {
+                    sensor.IsOnline = false;
+                }
+
+                devSensors.Add(sensor);
+            }
 
             return base.StartAsync(cancellationToken);
         }
@@ -44,9 +61,8 @@ namespace OSWMonitorService
 
                 if (run)
                 {
-                    Run(config);
+                    Execute(config);
                     config = Config.Get();
-                    delay = config.Delay > 60 ? 60 : config.Delay;
                 }
 
                 DateTime now = DateTime.Now;
@@ -54,82 +70,127 @@ namespace OSWMonitorService
             }
         }
 
-        private void Run(Config config)
+        private void Execute(Config config)
         {
-            List<Sensor> list = config.DevMode ? GetDevSensors() : new List<Sensor>(config.Sensors);
-            List<Sensor> OfflineSensors = new List<Sensor>();
-            config.Sensors.Clear();
+            List<Sensor> list = config.DevMode ? devSensors : config.Sensors;
 
             foreach (Sensor sensor in list)
             {
-                if (!sensor.Skip)
-                {
-                    Log.Information("Getting sensor data on device " + sensor.IP);
-                    Sensor s = GetSensor(config, sensor.Name, sensor.IP);
-
-                    if (!s.IsOnline)
-                    {
-                        OfflineSensors.Add(s);
-                        CheckOnline(s);
-                    }
-
-                    config.Sensors.Add(s);
-                }
-                else
+                if (sensor.Skip)
                 {
                     Log.Information("Skipping device " + sensor.IP);
+                    continue;
                 }
-            }
 
-            if (OfflineSensors.Count > 0)
-            {
-                string subject = "OSW Sensor Offline";
-                string body = "The following sensors are offline:" + Environment.NewLine;
-
-                foreach (Sensor sensor in OfflineSensors)
+                Task.Run(() => 
                 {
-                    body = body + Environment.NewLine + sensor.Name + " - " + sensor.IP;
-                }
+                    Log.Information("[" + sensor.IP + "] Getting sensor data");
 
-                if(!config.DevMode)
-                {
-                    Utils.SendEmail(config.Email, subject, body);
-                }
-            }
+                    Sensor s = ParseSensor(sensor, config.DevMode);
 
-            if (config.DataType.Type.Equals(DataType.DataTypes.EXCEL))
-            {
-                new Excel(config).AddAll();
-            }
-            else if (config.DataType.Type.Equals(DataType.DataTypes.ACCESS))
-            {
-                new Access(config).AddAll();
-            }
-            else if (config.DataType.Type.Equals(DataType.DataTypes.MYSQL))
-            {
-                new MySQL(config).AddAll();
+                    Stopwatch stopWatch = new Stopwatch();
+                    stopWatch.Start();
+
+                    while (!s.IsOnline)
+                    {
+                        Log.Warning("[" + s.IP + "] Sensor offline. Thread sleeping for 19 seconds");
+
+                        Thread.Sleep(19000);
+
+                        if (stopWatch.Elapsed.TotalSeconds >= 57000)
+                        {
+                            Log.Error("[" + s.IP + "] Sensor offline. Timing out");
+
+                            offlineSensors.TryAdd(s.IP, s.IP);
+
+                            Utils.SendEmail(config.Email, s.Recipients, "[" + s.Name + "] Sensor Alarm - Connection Timeout", "Name: " + s.Name + Environment.NewLine + "IP: " + s.IP + Environment.NewLine + "Online: " + s.IsOnline, config.DevMode);
+
+                            stopWatch.Stop();
+                            return;
+                        }
+                        else
+                        {
+                            s = ParseSensor(s, config.DevMode);
+                        }
+                    }
+
+                    stopWatch.Stop();
+
+                    if (offlineSensors.ContainsKey(s.IP))
+                    {
+                        Log.Information("[" + s.IP + "] Skipping");
+
+                        offlineSensors.TryRemove(s.IP, out string retrievedValue);
+
+                        Utils.SendEmail(config.Email, s.Recipients, "[" + s.Name + "] Sensor Alarm - Online", "Name: " + s.Name + Environment.NewLine + "IP: " + s.IP + Environment.NewLine + "Online: " + s.IsOnline, config.DevMode);
+                    }
+
+                    if (config.DataType.Type.Equals(DataType.DataTypes.ACCESS))
+                    {
+                        new Access(config).AddEntry(s);
+                    }
+                    else if (config.DataType.Type.Equals(DataType.DataTypes.MYSQL))
+                    {
+                        new MySQL(config).AddEntry(s);
+                    }
+                    else
+                    {
+                        Log.Error("Invalid Database Type in config");
+                    }
+
+                    if (s.Humidity > s.HumidityLimit)
+                    {
+                        Log.Warning("[" + s.IP + "] Humidity Threshold Reached!");
+
+                        Utils.SendEmail(config.Email, s.Recipients, "[" + s.Name + "] Sensor Alarm - Humidity Threshold Reached", "Name: " + s.Name + Environment.NewLine + "IP: " + s.IP + Environment.NewLine + "Temperature: " + s.Temperature 
+                            + Environment.NewLine + "Humidity: " + s.Humidity, config.DevMode);
+                    }
+
+                    if (s.Temperature > s.TemperatureLimit)
+                    {
+                        Log.Warning("[" + s.IP + "] Temperature Threshold Reached!");
+
+                        Utils.SendEmail(config.Email, s.Recipients, "[" + s.Name + "] Sensor Alarm - Temperature Threshold Reached", "Name: " + s.Name + Environment.NewLine + "IP: " + s.IP + Environment.NewLine + "Temperature: " + s.Temperature
+                            + Environment.NewLine + "Humidity: " + s.Humidity, config.DevMode);
+                    }
+
+                    // 5 DEGREES APART
+                    if((s.Temperature > s.DewPoint ? s.Temperature - s.DewPoint : s.DewPoint - s.Temperature) <= 5)
+                    {
+                        Log.Warning("[" + s.IP + "] Condensation Warning!");
+
+                    // THE DIDN"T ASK FOR THIS, BUT HAVE A FEELING THEY WILL. DISABLED FOR NOW.
+                    //    Utils.SendEmail(config.Email, s.Recipients, "[" + s.Name + "] Sensor Alarm - Condensation Warning", "Name: " + s.Name + Environment.NewLine + "IP: " + s.IP + Environment.NewLine + "Temperature: " + s.Temperature
+                    //        + Environment.NewLine + "Humidity: " + s.Humidity + Environment.NewLine + "Dew Point: " + s.DewPoint, config.DevMode);
+                    }
+                });
             }
         }
 
-        private Sensor GetSensor(Config config, string name, string ip)
+        private Sensor ParseSensor(Sensor sensor, bool dev)
         {
-            Sensor sensor = new Sensor(name, ip);
-
-            if(config.DevMode)
+            if(dev)
             {
+                if(!sensor.IsOnline)
+                {
+                    if (new Random().Next(100) < 5)
+                    {
+                        sensor.IsOnline = true;
+                    }
+                }
+
                 sensor.Temperature = Math.Round(new Random().NextDouble() * (100 - 30) + 30, 2);
                 sensor.Humidity = Math.Round(new Random().NextDouble() * (60 - 30) + 30, 2);
                 sensor.DewPoint = Math.Round(new Random().NextDouble() * (100 - 30) + 30, 2);
-                sensor.IsOnline = true;
 
                 return sensor;
             }
 
-            var url = @"http://" + ip + "/postReadHtml?a=";
+            var url = @"http://" + sensor.IP + "/postReadHtml?a=";
 
             if(!IsOnline(url))
             {
-                Log.Error("Failed to get sensor data on device " + ip);
+                Log.Error("Failed to get sensor data on device " + sensor.IP);
 
                 sensor.IsOnline = false;
 
@@ -156,68 +217,6 @@ namespace OSWMonitorService
             sensor.DewPoint = Double.Parse(dew[dew.Length - 2]);
 
             return sensor;
-        }
-
-        private async void CheckOnline(Sensor sensor)
-        {
-            Stopwatch stopWatch = new Stopwatch();
-            stopWatch.Start();
-
-            await Task.Run(() => {
-
-                Config config = Config.Get();
-
-                while (!sensor.IsOnline)
-                {
-                    Thread.Sleep(30000);
-
-                    double delay = config.Delay;
-                    TimeSpan timeSpan = stopWatch.Elapsed;
-
-                    if (timeSpan.TotalSeconds >= (delay * 60))
-                    {
-                        Log.Error("[" + sensor.IP + "] Sensor still offline. Timing out");
-                        break;
-                    }
-                    else
-                    {
-                        var url = @"http://" + sensor.IP + "/postReadHtml?a=";
-
-                        if (IsOnline(url))
-                        {
-                            Log.Information("[" + sensor.IP + "] Sensor back online.");
-                            sensor.IsOnline = true;
-
-                            string subject = "OSW Sensor Online";
-                            string body = "The following sensor is back online:" + Environment.NewLine + Environment.NewLine + sensor.Name + " - " + sensor.IP;
-
-                            if (!config.DevMode)
-                            {
-                                Utils.SendEmail(config.Email, subject, body);
-                            }
-                        } else
-                        {
-                            Log.Warning("[" + sensor.IP + "] Sensor still offline.");
-                        }
-                    }
-                }
-
-                stopWatch.Stop();
-            });
-        }
-
-        private List<Sensor> GetDevSensors()
-        {
-            List<Sensor> list = new List<Sensor>();
-
-            for(int i = 1; i < 10; i++)
-            {
-                Sensor sensor = new Sensor("Test" + i, "10.0.0." + i);
-                sensor.Skip = false;
-                list.Add(sensor);
-            }
-
-            return list;
         }
 
         private bool IsOnline(string url)

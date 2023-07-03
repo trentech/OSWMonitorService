@@ -1,5 +1,4 @@
 ﻿using OSWMonitorService.JSON;
-using OSWMonitorService.Properties;
 using Serilog;
 using System.Data;
 using System.Data.OleDb;
@@ -8,17 +7,21 @@ namespace OSWMonitorService.DataTypes
 {
     internal class Access
     {
-        Config config;
-
+        OleDbConnection db;
+        
         public Access(Config config)
         {
-            this.config = config;
+            string dbFile = Path.Combine(config.DataType.Path, config.DataType.Name) + ".accdb";
+            db = new OleDbConnection(@"Provider=Microsoft.ACE.OLEDB.16.0; Data Source = " + dbFile);
+        }
+
+        public void Close()
+        {
+            db.Close();
         }
 
         public void AddEntry(Sensor sensor)
         {
-            string dbFile = Path.Combine(config.DataType.Path, config.DataType.Name) + ".accdb";
-
             if (!TableExists(sensor))
             {
                 CreateTable(sensor);
@@ -26,7 +29,7 @@ namespace OSWMonitorService.DataTypes
 
             string tableName = sensor.IP.Replace(".", "");
 
-            using (OleDbConnection db = new OleDbConnection(@"Provider=Microsoft.ACE.OLEDB.16.0; Data Source = " + dbFile))
+            if (db.State != ConnectionState.Open)
             {
                 try
                 {
@@ -38,34 +41,33 @@ namespace OSWMonitorService.DataTypes
                     Log.Error(ex.Message);
                     return;
                 }
-
-                OleDbCommand command = new OleDbCommand("INSERT INTO " + tableName + " ([Temperature], [Humidity], [Dew], [Online], [DateTime]) VALUES (?,?,?,?,?)", db);
-
-                command.Parameters.AddWithValue("@Temperature", sensor.Temperature);
-                command.Parameters.AddWithValue("@Humidity", sensor.Humidity);
-                command.Parameters.AddWithValue("@Dew", sensor.DewPoint);
-                command.Parameters.AddWithValue("@Online", sensor.IsOnline);
-                command.Parameters.AddWithValue("@DateTime", GetDateTime(sensor.DateTime));
-
-                command.ExecuteNonQuery();
-
-                command = new OleDbCommand("INSERT INTO [Names] ([IP], [Name]) VALUES (?,?)", db);
-
-                command.Parameters.AddWithValue("@IP", tableName);
-                command.Parameters.AddWithValue("@SensorName", sensor.Name);
-
-                command.ExecuteNonQuery();
-
-                db.Close();
             }
+
+            OleDbCommand command = new OleDbCommand("INSERT INTO " + tableName + " ([Temperature], [Humidity], [Dew], [Online], [DateTime]) VALUES (?,?,?,?,?)", db);
+
+            command.Parameters.AddWithValue("@Temperature", sensor.Temperature);
+            command.Parameters.AddWithValue("@Humidity", sensor.Humidity);
+            command.Parameters.AddWithValue("@Dew", sensor.DewPoint);
+            command.Parameters.AddWithValue("@Online", sensor.IsOnline);
+            command.Parameters.AddWithValue("@DateTime", GetDateTime(sensor.DateTime));
+
+            command.ExecuteNonQuery();
+
+            command = new OleDbCommand("INSERT INTO [Names] ([IP], [Name]) VALUES (?,?)", db);
+
+            command.Parameters.AddWithValue("@IP", tableName);
+            command.Parameters.AddWithValue("@SensorName", sensor.Name);
+
+            command.ExecuteNonQuery();
+
+            db.Close();
         }
 
-        public bool TableExists(Sensor sensor)
+        private bool TableExists(Sensor sensor)
         {
-            string dbFile = Path.Combine(config.DataType.Path, config.DataType.Name) + ".accdb";
             string tableName = sensor.IP.Replace(".", "");
 
-            using (OleDbConnection db = new OleDbConnection(@"Provider=Microsoft.ACE.OLEDB.16.0; Data Source = " + dbFile))
+            if (db.State != ConnectionState.Open)
             {
                 try
                 {
@@ -77,24 +79,23 @@ namespace OSWMonitorService.DataTypes
                     Log.Error(ex.Message);
                     return false;
                 }
+            }
 
-                DataTable schema = db.GetOleDbSchemaTable(OleDbSchemaGuid.Tables, new object[] { null, null, null, "TABLE" });
+            DataTable schema = db.GetOleDbSchemaTable(OleDbSchemaGuid.Tables, new object[] { null, null, null, "TABLE" });
 
-                if (schema.Rows.OfType<DataRow>().Any(r => r.ItemArray[2].ToString().ToLower() == tableName.ToLower()))
-                {
-                    return true;
-                }
+            if (schema.Rows.OfType<DataRow>().Any(r => r.ItemArray[2].ToString().ToLower() == tableName.ToLower()))
+            {
+                return true;
             }
 
             return false;
         }
 
-        public void CreateTable(Sensor sensor)
+        private void CreateTable(Sensor sensor)
         {
-            string dbFile = Path.Combine(config.DataType.Path, config.DataType.Name) + ".accdb";
             string tableName = sensor.IP.Replace(".", "");
 
-            using (OleDbConnection db = new OleDbConnection(@"Provider=Microsoft.ACE.OLEDB.16.0; Data Source = " + dbFile))
+            if (db.State != ConnectionState.Open)
             {
                 try
                 {
@@ -106,12 +107,11 @@ namespace OSWMonitorService.DataTypes
                     Log.Error(ex.Message);
                     return;
                 }
-
-                OleDbCommand command = new OleDbCommand("CREATE TABLE " + tableName + " ([Temperature] DOUBLE, [Humidity] DOUBLE, [Dew] DOUBLE, [Online] BIT, [DateTime] DateTime)", db);
-
-                command.ExecuteNonQuery();
-                db.Close();
             }
+
+            OleDbCommand command = new OleDbCommand("CREATE TABLE " + tableName + " ([Temperature] DOUBLE, [Humidity] DOUBLE, [Dew] DOUBLE, [Online] BIT, [DateTime] DateTime)", db);
+
+            command.ExecuteNonQuery();
         }
 
         private DateTime GetDateTime(DateTime d)

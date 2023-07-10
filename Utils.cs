@@ -3,7 +3,6 @@ using Serilog;
 using OSWMonitorService.JSON;
 using System.Net;
 using Newtonsoft.Json;
-using System.Collections.Generic;
 
 namespace OSWMonitorService
 {
@@ -14,11 +13,9 @@ namespace OSWMonitorService
         {
             List<Sensor> list = new List<Sensor>();
 
-            string path = Config.PATH + @"\Sensors";
+            string path = Path.Combine(Config.PATH, "Sensors");
 
-            List<string> sensors = Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories).Where(s => s.EndsWith(".json") && s.Count(c => c == '.') == 2).ToList();
-
-            foreach (var sensor in sensors)
+            foreach (var sensor in Directory.GetFiles(path, "*.json"))
             {
                 try
                 {
@@ -35,7 +32,8 @@ namespace OSWMonitorService
 
         public static Sensor GetSensor(string IP)
         {
-            string sensor = Config.PATH + @"\Sensors\" + IP + ".json";
+            string path = Path.Combine(Config.PATH, "Sensors");
+            string sensor = Path.Combine(path, IP + ".json");
 
             if (File.Exists(sensor))
             {

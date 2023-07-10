@@ -2,13 +2,15 @@
 using Serilog;
 using System.Data;
 using System.Data.OleDb;
+using System.Diagnostics;
 
 namespace OSWMonitorService.DataTypes
 {
     internal class Access
     {
         OleDbConnection db;
-        
+        private readonly object _lock = new object();
+
         public Access(Config config)
         {
             string dbFile = Path.Combine(config.DataType.Path, config.DataType.Name) + ".accdb";
@@ -43,22 +45,33 @@ namespace OSWMonitorService.DataTypes
                 }
             }
 
-            OleDbCommand command = new OleDbCommand("INSERT INTO " + tableName + " ([Temperature], [Humidity], [Dew], [Online], [DateTime]) VALUES (?,?,?,?,?)", db);
+            try
+            {
+                lock (_lock)
+                {
+                    OleDbCommand command = new OleDbCommand("INSERT INTO " + tableName + " ([Temperature], [Humidity], [Dew], [Online], [DateTime]) VALUES (?,?,?,?,?)", db);
 
-            command.Parameters.AddWithValue("@Temperature", sensor.Temperature);
-            command.Parameters.AddWithValue("@Humidity", sensor.Humidity);
-            command.Parameters.AddWithValue("@Dew", sensor.DewPoint);
-            command.Parameters.AddWithValue("@Online", sensor.IsOnline);
-            command.Parameters.AddWithValue("@DateTime", GetDateTime(sensor.DateTime));
+                    command.Parameters.AddWithValue("@Temperature", sensor.Temperature);
+                    command.Parameters.AddWithValue("@Humidity", sensor.Humidity);
+                    command.Parameters.AddWithValue("@Dew", sensor.DewPoint);
+                    command.Parameters.AddWithValue("@Online", sensor.IsOnline);
+                    command.Parameters.AddWithValue("@DateTime", GetDateTime(sensor.DateTime));
 
-            command.ExecuteNonQuery();
+                    command.ExecuteNonQuery();
 
-            command = new OleDbCommand("INSERT INTO [Names] ([IP], [Name]) VALUES (?,?)", db);
+                    command = new OleDbCommand("INSERT INTO [Names] ([IP], [Name]) VALUES (?,?)", db);
 
-            command.Parameters.AddWithValue("@IP", tableName);
-            command.Parameters.AddWithValue("@SensorName", sensor.Name);
+                    command.Parameters.AddWithValue("@IP", tableName);
+                    command.Parameters.AddWithValue("@SensorName", sensor.Name);
 
-            command.ExecuteNonQuery();
+                    command.ExecuteNonQuery();
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Failed to write to Database file.");
+                Log.Error(ex.Message);
+            }
 
             db.Close();
         }

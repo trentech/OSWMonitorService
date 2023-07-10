@@ -1,6 +1,5 @@
 ﻿using Newtonsoft.Json;
-using System.IO;
-using static Org.BouncyCastle.Math.EC.ECCurve;
+using static System.Environment;
 
 namespace OSWMonitorService.JSON
 {
@@ -40,7 +39,7 @@ namespace OSWMonitorService.JSON
 
         public void Save()
         {
-            File.WriteAllText(Path.Combine(Config.PATH, @"\Sensors\" + IP + ".json"), JsonConvert.SerializeObject(this, Formatting.Indented));
+            File.WriteAllText(Path.Combine(Config.PATH, @"Sensors\" + IP + ".json"), JsonConvert.SerializeObject(this, Formatting.Indented));
         }
     }
 }

@@ -11,8 +11,6 @@ namespace OSWMonitorService.JSON
         public int Delay { get; set; }
         [JsonProperty]
         public Mail Email { get; set; }
-        [JsonProperty]
-        public bool DevMode { get; set; }
 
         [JsonIgnore]
         public static string PATH = Path.Combine(GetFolderPath(SpecialFolder.CommonApplicationData), "OSW Monitoring");
@@ -24,7 +22,6 @@ namespace OSWMonitorService.JSON
             DataType = new DataType();
             Delay = 10;
             Email = new Mail();
-            DevMode = false;
         }
 
         public static Config Get()
@@ -45,6 +42,20 @@ namespace OSWMonitorService.JSON
             else
             {
                 config = JsonConvert.DeserializeObject<Config>(File.ReadAllText(CONFIG));
+            }
+
+            if(!Directory.Exists(Path.Combine(PATH, "Sensors")))
+            {
+                Directory.CreateDirectory(Path.Combine(PATH, "Sensors"));
+
+                List<string> recipients = new List<string>();
+                recipients.Add("example@mail.com");
+
+                Sensor sensor = new Sensor("Example", "192.168.1.1");
+                sensor.Recipients = recipients;
+                sensor.Skip = true;
+
+                sensor.Save();
             }
 
             return config;

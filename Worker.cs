@@ -1,6 +1,5 @@
 using HtmlAgilityPack;
 using Serilog;
-using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
 using OSWMonitorService.DataTypes;
@@ -11,23 +10,11 @@ namespace OSWMonitorService
 {
     public class Worker : BackgroundService
     {
-        private List<Sensor> devSensors = new List<Sensor>();
-
         public override Task StartAsync(CancellationToken cancellationToken)
         {
             Log.Information("Starting OSW Monitoring Service.");
 
             Config config = Config.Get();
-
-            foreach(Sensor sensor in Utils.GetSensors())
-            {
-                if (new Random().Next(100) < 5)
-                {
-                    sensor.IsOnline = false;
-                }
-
-                devSensors.Add(sensor);
-            }
 
             if (config.DataType.Type.Equals(DataType.DataTypes.ACCESS))
             {
@@ -81,9 +68,9 @@ namespace OSWMonitorService
 
         private void Execute(Config config)
         {
-            List<Sensor> list = config.DevMode ? devSensors : Utils.GetSensors();
+            Log.Information("Executing");
 
-            foreach (Sensor sensor in list)
+            foreach (Sensor sensor in Utils.GetSensors())
             {
                 if (sensor.Skip)
                 {
@@ -102,7 +89,7 @@ namespace OSWMonitorService
                         wasOffline = true;
                     }
 
-                    Sensor s = ParseSensor(sensor, config.DevMode);
+                    Sensor s = ParseSensor(sensor);
 
                     Stopwatch stopWatch = Stopwatch.StartNew();
 
@@ -121,13 +108,13 @@ namespace OSWMonitorService
                         }
                         else
                         {
-                            s = ParseSensor(s, config.DevMode);
+                            s = ParseSensor(s);
                         }
                     }
 
                     stopWatch.Stop();
 
-                    if (wasOffline)
+                    if (wasOffline && s.IsOnline)
                     {
                         Log.Information("[" + s.IP + "] Sensor online");
 
@@ -163,7 +150,7 @@ namespace OSWMonitorService
                             + Environment.NewLine + "Humidity: " + s.Humidity);
                     }
 
-                    if (s.Temperature > s.TemperatureLimit)
+                    if (s.TemperatureLimit != 0 && s.Temperature > s.TemperatureLimit)
                     {
                         Log.Warning("[" + s.IP + "] Temperature Threshold Reached!");
 
@@ -186,25 +173,8 @@ namespace OSWMonitorService
             }
         }
 
-        private Sensor ParseSensor(Sensor sensor, bool dev)
+        private Sensor ParseSensor(Sensor sensor)
         {
-            if (dev)
-            {
-                if (!sensor.IsOnline)
-                {
-                    if (new Random().Next(100) < 5)
-                    {
-                        sensor.IsOnline = true;
-                    }
-                }
-
-                sensor.Temperature = Math.Round(new Random().NextDouble() * (105 - 30) + 30, 2);
-                sensor.Humidity = Math.Round(new Random().NextDouble() * (60 - 10) + 10, 2);
-                sensor.DewPoint = Math.Round(new Random().NextDouble() * (105 - 30) + 30, 2);
-
-                return sensor;
-            }
-
             var url = @"http://" + sensor.IP + "/postReadHtml?a=";
 
             HtmlWeb web = new HtmlWeb();
@@ -213,9 +183,14 @@ namespace OSWMonitorService
             {
                 webRequest.Timeout = 10000;
                 return true;
-            }; 
+            };
 
-            HtmlDocument htmlDoc = web.Load(url);
+            HtmlDocument htmlDoc = null;
+            try
+            {
+                htmlDoc = web.Load(url);
+            }
+            catch { }
 
             if(htmlDoc == null)
             {

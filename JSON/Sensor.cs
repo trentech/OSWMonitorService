@@ -1,4 +1,6 @@
 ﻿using Newtonsoft.Json;
+using System.IO;
+using static Org.BouncyCastle.Math.EC.ECCurve;
 
 namespace OSWMonitorService.JSON
 {
@@ -13,9 +15,13 @@ namespace OSWMonitorService.JSON
         [JsonProperty]
         public double TemperatureLimit { get; set; } = 0;
         [JsonProperty]
+        public double HumidityWarning { get; set; } = 0;
+        [JsonProperty]
         public double HumidityLimit { get; set; } = 0;
         [JsonProperty]
         public List<string> Recipients { get; set; }
+        [JsonProperty]
+        public bool IsOnline { get; set; } = true;
         [JsonIgnore]
         public DateTime DateTime { get; set; } = DateTime.Now;
         [JsonIgnore]
@@ -24,13 +30,17 @@ namespace OSWMonitorService.JSON
         public double Humidity { get; set; } = 0;
         [JsonIgnore]
         public double DewPoint { get; set; } = 0;
-        [JsonIgnore]
-        public bool IsOnline { get; set; } = true;
+
         public Sensor(string name, string ip)
         {
             Name = name;
             IP = ip;
             Recipients = new List<string>();
+        }
+
+        public void Save()
+        {
+            File.WriteAllText(Path.Combine(Config.PATH, @"\Sensors\" + IP + ".json"), JsonConvert.SerializeObject(this, Formatting.Indented));
         }
     }
 }

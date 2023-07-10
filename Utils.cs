@@ -2,11 +2,56 @@
 using Serilog;
 using OSWMonitorService.JSON;
 using System.Net;
+using Newtonsoft.Json;
+using System.Collections.Generic;
 
 namespace OSWMonitorService
 {
     internal class Utils
     {
+
+        public static List<Sensor> GetSensors()
+        {
+            List<Sensor> list = new List<Sensor>();
+
+            string path = Config.PATH + @"\Sensors";
+
+            List<string> sensors = Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories).Where(s => s.EndsWith(".json") && s.Count(c => c == '.') == 2).ToList();
+
+            foreach (var sensor in sensors)
+            {
+                try
+                {
+                    Sensor s = JsonConvert.DeserializeObject<Sensor>(File.ReadAllText(sensor));
+                    if (s != null) { list.Add(s); } else { Log.Error("Cannot deserialize sensor from JSON. It is null"); } 
+                } catch (Exception e)
+                {
+                    Log.Error("Cannot deserialize sensor from JSON", e);
+                }
+            }
+
+            return list;
+        }
+
+        public static Sensor GetSensor(string IP)
+        {
+            string sensor = Config.PATH + @"\Sensors\" + IP + ".json";
+
+            if (File.Exists(sensor))
+            {
+                try
+                {
+                    return JsonConvert.DeserializeObject<Sensor>(File.ReadAllText(sensor));
+                }
+                catch (Exception e)
+                {
+                    Log.Error("Cannot deserialize sensor from JSON", e);
+                }
+            }
+
+            return null;
+        }
+
         public static void SendEmail(Mail mail, List<string> recipients, string subject, string body)
         {
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12 | SecurityProtocolType.Tls13;

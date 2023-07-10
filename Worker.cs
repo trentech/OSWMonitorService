@@ -12,7 +12,6 @@ namespace OSWMonitorService
     public class Worker : BackgroundService
     {
         private List<Sensor> devSensors = new List<Sensor>();
-        private ConcurrentDictionary<string, string> offlineSensors = new ConcurrentDictionary<string,string>();
 
         public override Task StartAsync(CancellationToken cancellationToken)
         {
@@ -20,7 +19,7 @@ namespace OSWMonitorService
 
             Config config = Config.Get();
 
-            foreach(Sensor sensor in config.Sensors)
+            foreach(Sensor sensor in Utils.GetSensors())
             {
                 if (new Random().Next(100) < 5)
                 {
@@ -82,13 +81,13 @@ namespace OSWMonitorService
 
         private void Execute(Config config)
         {
-            List<Sensor> list = config.DevMode ? devSensors : config.Sensors;
+            List<Sensor> list = config.DevMode ? devSensors : Utils.GetSensors();
 
             foreach (Sensor sensor in list)
             {
                 if (sensor.Skip)
                 {
-                    Log.Information("Skipping device " + sensor.IP);
+                    Log.Information("[" + sensor.IP + "] Skipping device");
                     continue;
                 }
 
@@ -96,10 +95,16 @@ namespace OSWMonitorService
                 {
                     Log.Information("[" + sensor.IP + "] Getting sensor data");
 
+                    bool wasOffline = false;
+
+                    if(!sensor.IsOnline)
+                    {
+                        wasOffline = true;
+                    }
+
                     Sensor s = ParseSensor(sensor, config.DevMode);
 
-                    Stopwatch stopWatch = new Stopwatch();
-                    stopWatch.Start();
+                    Stopwatch stopWatch = Stopwatch.StartNew();
 
                     while (!s.IsOnline)
                     {
@@ -108,8 +113,6 @@ namespace OSWMonitorService
                         if (stopWatch.Elapsed.TotalSeconds >= 59000)
                         {
                             Log.Error("[" + s.IP + "] Sensor offline. Timing out");
-
-                            offlineSensors.TryAdd(s.IP, s.IP);
 
                             Utils.SendEmail(config.Email, s.Recipients, "[" + s.Name + "] Sensor Alarm - Connection Timeout", "Name: " + s.Name + Environment.NewLine + "IP: " + s.IP + Environment.NewLine + "Online: " + s.IsOnline);
 
@@ -124,11 +127,9 @@ namespace OSWMonitorService
 
                     stopWatch.Stop();
 
-                    if (offlineSensors.ContainsKey(s.IP))
+                    if (wasOffline)
                     {
-                        Log.Information("[" + s.IP + "] Skipping");
-
-                        offlineSensors.TryRemove(s.IP, out string retrievedValue);
+                        Log.Information("[" + s.IP + "] Sensor online");
 
                         Utils.SendEmail(config.Email, s.Recipients, "[" + s.Name + "] Sensor Alarm - Online", "Name: " + s.Name + Environment.NewLine + "IP: " + s.IP + Environment.NewLine + "Online: " + s.IsOnline);
                     }
@@ -146,7 +147,15 @@ namespace OSWMonitorService
                         Log.Error("Invalid Database Type in config");
                     }
 
-                    if (s.Humidity > s.HumidityLimit)
+                    if (s.HumidityWarning != 0 && s.Humidity > s.HumidityWarning && s.Humidity < s.HumidityLimit)
+                    {
+                        Log.Warning("[" + s.IP + "] Humidity Threshold Warning!");
+
+                        Utils.SendEmail(config.Email, s.Recipients, "[" + s.Name + "] Sensor Alarm - Humidity Threshold Warning", "Name: " + s.Name + Environment.NewLine + "IP: " + s.IP + Environment.NewLine + "Temperature: " + s.Temperature
+                            + Environment.NewLine + "Humidity: " + s.Humidity);
+                    }
+
+                    if (s.HumidityLimit != 0 && s.Humidity > s.HumidityLimit)
                     {
                         Log.Warning("[" + s.IP + "] Humidity Threshold Reached!");
 
@@ -171,6 +180,8 @@ namespace OSWMonitorService
                     //    Utils.SendEmail(config.Email, s.Recipients, "[" + s.Name + "] Sensor Alarm - Condensation Warning", "Name: " + s.Name + Environment.NewLine + "IP: " + s.IP + Environment.NewLine + "Temperature: " + s.Temperature
                     //        + Environment.NewLine + "Humidity: " + s.Humidity + Environment.NewLine + "Dew Point: " + s.DewPoint);
                     }
+
+                    s.Save();
                 });
             }
         }
@@ -208,8 +219,7 @@ namespace OSWMonitorService
 
             if(htmlDoc == null)
             {
-                Log.Error("Failed to get sensor data on device " + sensor.IP);
-
+                Log.Error("[" + sensor.IP + "] Unable to scrape data");
                 sensor.IsOnline = false;
 
                 return sensor;

@@ -97,11 +97,14 @@ namespace OSWMonitorService
                     {
                         Log.Warning("[" + s.IP + "] Sensor offline. Trying again...");
 
-                        if (stopWatch.Elapsed.TotalSeconds >= 59000)
+                        if (stopWatch.Elapsed.TotalSeconds >= 59)
                         {
                             Log.Error("[" + s.IP + "] Sensor offline. Timing out");
 
-                            Utils.SendEmail(config.Email, s.Recipients, "[" + s.Name + "] Sensor Alarm - Connection Timeout", "Name: " + s.Name + Environment.NewLine + "IP: " + s.IP + Environment.NewLine + "Online: " + s.IsOnline);
+                            if(!wasOffline)
+                            {
+                                Utils.SendEmail(config.Email, s.Recipients, "[" + s.Name + "] Sensor Alarm - Connection Timeout", "Name: " + s.Name + Environment.NewLine + "IP: " + s.IP + Environment.NewLine + "Online: " + s.IsOnline);
+                            }
 
                             stopWatch.Stop();
                             return;
@@ -121,6 +124,43 @@ namespace OSWMonitorService
                         Utils.SendEmail(config.Email, s.Recipients, "[" + s.Name + "] Sensor Alarm - Online", "Name: " + s.Name + Environment.NewLine + "IP: " + s.IP + Environment.NewLine + "Online: " + s.IsOnline);
                     }
 
+                    if(s.IsOnline)
+                    {
+                        if (s.HumidityWarning != 0 && s.Humidity > s.HumidityWarning && s.Humidity < s.HumidityLimit)
+                        {
+                            Log.Warning("[" + s.IP + "] Humidity Threshold Warning!");
+
+                            Utils.SendEmail(config.Email, s.Recipients, "[" + s.Name + "] Sensor Alarm - Humidity Threshold Warning", "Name: " + s.Name + Environment.NewLine + "IP: " + s.IP + Environment.NewLine + "Temperature: " + s.Temperature
+                                + Environment.NewLine + "Humidity: " + s.Humidity);
+                        }
+
+                        if (s.HumidityLimit != 0 && s.Humidity > s.HumidityLimit)
+                        {
+                            Log.Warning("[" + s.IP + "] Humidity Threshold Reached!");
+
+                            Utils.SendEmail(config.Email, s.Recipients, "[" + s.Name + "] Sensor Alarm - Humidity Threshold Reached", "Name: " + s.Name + Environment.NewLine + "IP: " + s.IP + Environment.NewLine + "Temperature: " + s.Temperature
+                                + Environment.NewLine + "Humidity: " + s.Humidity);
+                        }
+
+                        if (s.TemperatureLimit != 0 && s.Temperature > s.TemperatureLimit)
+                        {
+                            Log.Warning("[" + s.IP + "] Temperature Threshold Reached!");
+
+                            Utils.SendEmail(config.Email, s.Recipients, "[" + s.Name + "] Sensor Alarm - Temperature Threshold Reached", "Name: " + s.Name + Environment.NewLine + "IP: " + s.IP + Environment.NewLine + "Temperature: " + s.Temperature
+                                + Environment.NewLine + "Humidity: " + s.Humidity);
+                        }
+
+                        // 5 DEGREES APART
+                        if ((s.Temperature > s.DewPoint ? s.Temperature - s.DewPoint : s.DewPoint - s.Temperature) <= 5)
+                        {
+                            Log.Warning("[" + s.IP + "] Condensation Warning!");
+
+                            // THE DIDN"T ASK FOR THIS, BUT HAVE A FEELING THEY WILL. DISABLED FOR NOW.
+                            //    Utils.SendEmail(config.Email, s.Recipients, "[" + s.Name + "] Sensor Alarm - Condensation Warning", "Name: " + s.Name + Environment.NewLine + "IP: " + s.IP + Environment.NewLine + "Temperature: " + s.Temperature
+                            //        + Environment.NewLine + "Humidity: " + s.Humidity + Environment.NewLine + "Dew Point: " + s.DewPoint);
+                        }
+                    }
+
                     if (config.DataType.Type.Equals(DataType.DataTypes.ACCESS))
                     {
                         new Access(config).AddEntry(s);
@@ -132,40 +172,6 @@ namespace OSWMonitorService
                     else
                     {
                         Log.Error("Invalid Database Type in config");
-                    }
-
-                    if (s.HumidityWarning != 0 && s.Humidity > s.HumidityWarning && s.Humidity < s.HumidityLimit)
-                    {
-                        Log.Warning("[" + s.IP + "] Humidity Threshold Warning!");
-
-                        Utils.SendEmail(config.Email, s.Recipients, "[" + s.Name + "] Sensor Alarm - Humidity Threshold Warning", "Name: " + s.Name + Environment.NewLine + "IP: " + s.IP + Environment.NewLine + "Temperature: " + s.Temperature
-                            + Environment.NewLine + "Humidity: " + s.Humidity);
-                    }
-
-                    if (s.HumidityLimit != 0 && s.Humidity > s.HumidityLimit)
-                    {
-                        Log.Warning("[" + s.IP + "] Humidity Threshold Reached!");
-
-                        Utils.SendEmail(config.Email, s.Recipients, "[" + s.Name + "] Sensor Alarm - Humidity Threshold Reached", "Name: " + s.Name + Environment.NewLine + "IP: " + s.IP + Environment.NewLine + "Temperature: " + s.Temperature 
-                            + Environment.NewLine + "Humidity: " + s.Humidity);
-                    }
-
-                    if (s.TemperatureLimit != 0 && s.Temperature > s.TemperatureLimit)
-                    {
-                        Log.Warning("[" + s.IP + "] Temperature Threshold Reached!");
-
-                        Utils.SendEmail(config.Email, s.Recipients, "[" + s.Name + "] Sensor Alarm - Temperature Threshold Reached", "Name: " + s.Name + Environment.NewLine + "IP: " + s.IP + Environment.NewLine + "Temperature: " + s.Temperature
-                            + Environment.NewLine + "Humidity: " + s.Humidity);
-                    }
-
-                    // 5 DEGREES APART
-                    if((s.Temperature > s.DewPoint ? s.Temperature - s.DewPoint : s.DewPoint - s.Temperature) <= 5)
-                    {
-                        Log.Warning("[" + s.IP + "] Condensation Warning!");
-
-                    // THE DIDN"T ASK FOR THIS, BUT HAVE A FEELING THEY WILL. DISABLED FOR NOW.
-                    //    Utils.SendEmail(config.Email, s.Recipients, "[" + s.Name + "] Sensor Alarm - Condensation Warning", "Name: " + s.Name + Environment.NewLine + "IP: " + s.IP + Environment.NewLine + "Temperature: " + s.Temperature
-                    //        + Environment.NewLine + "Humidity: " + s.Humidity + Environment.NewLine + "Dew Point: " + s.DewPoint);
                     }
 
                     s.Save();

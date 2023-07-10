@@ -57,8 +57,20 @@ namespace OSWMonitorService
 
                 if (run)
                 {
-                    Execute(config);
+                    Log.Information("Executing");
+
                     config = Config.Get();
+
+                    foreach (Sensor sensor in Utils.GetSensors())
+                    {
+                        if (sensor.Skip)
+                        {
+                            Log.Information("[" + sensor.IP + "] Skipped");
+                            continue;
+                        }
+
+                        _ = NewTask(config, sensor);
+                    }
                 }
 
                 DateTime now = DateTime.Now;
@@ -66,117 +78,106 @@ namespace OSWMonitorService
             }
         }
 
-        private void Execute(Config config)
+        private Task NewTask(Config config, Sensor sensor)
         {
-            Log.Information("Executing");
-
-            foreach (Sensor sensor in Utils.GetSensors())
+            return Task.Run(() =>
             {
-                if (sensor.Skip)
+                Log.Information("[" + sensor.IP + "] Getting sensor data");
+
+                bool wasOffline = false;
+
+                if (!sensor.IsOnline)
                 {
-                    Log.Information("[" + sensor.IP + "] Skipping device");
-                    continue;
+                    wasOffline = true;
                 }
 
-                Task.Run(() => 
+                sensor = ParseSensor(sensor);
+
+                Stopwatch stopWatch = Stopwatch.StartNew();
+
+                while (!sensor.IsOnline)
                 {
-                    Log.Information("[" + sensor.IP + "] Getting sensor data");
+                    Log.Warning("[" + sensor.IP + "] Sensor offline. Trying again...");
 
-                    bool wasOffline = false;
-
-                    if(!sensor.IsOnline)
+                    if (stopWatch.Elapsed.TotalSeconds >= 59)
                     {
-                        wasOffline = true;
-                    }
+                        Log.Error("[" + sensor.IP + "] Sensor offline. Timing out");
 
-                    Sensor s = ParseSensor(sensor);
-
-                    Stopwatch stopWatch = Stopwatch.StartNew();
-
-                    while (!s.IsOnline)
-                    {
-                        Log.Warning("[" + s.IP + "] Sensor offline. Trying again...");
-
-                        if (stopWatch.Elapsed.TotalSeconds >= 59)
+                        if (!wasOffline)
                         {
-                            Log.Error("[" + s.IP + "] Sensor offline. Timing out");
-
-                            if(!wasOffline)
-                            {
-                                Utils.SendEmail(config.Email, s.Recipients, "[" + s.Name + "] Sensor Alarm - Connection Timeout", "Name: " + s.Name + Environment.NewLine + "IP: " + s.IP + Environment.NewLine + "Online: " + s.IsOnline);
-                            }
-
-                            stopWatch.Stop();
-                            return;
-                        }
-                        else
-                        {
-                            s = ParseSensor(s);
-                        }
-                    }
-
-                    stopWatch.Stop();
-
-                    if (wasOffline && s.IsOnline)
-                    {
-                        Log.Information("[" + s.IP + "] Sensor online");
-
-                        Utils.SendEmail(config.Email, s.Recipients, "[" + s.Name + "] Sensor Alarm - Online", "Name: " + s.Name + Environment.NewLine + "IP: " + s.IP + Environment.NewLine + "Online: " + s.IsOnline);
-                    }
-
-                    if(s.IsOnline)
-                    {
-                        if (s.HumidityWarning != 0 && s.Humidity > s.HumidityWarning && s.Humidity < s.HumidityLimit)
-                        {
-                            Log.Warning("[" + s.IP + "] Humidity Threshold Warning!");
-
-                            Utils.SendEmail(config.Email, s.Recipients, "[" + s.Name + "] Sensor Alarm - Humidity Threshold Warning", "Name: " + s.Name + Environment.NewLine + "IP: " + s.IP + Environment.NewLine + "Temperature: " + s.Temperature
-                                + Environment.NewLine + "Humidity: " + s.Humidity);
+                            Utils.SendEmail(config.Email, sensor.Recipients, "[" + sensor.Name + "] Sensor Alarm - Connection Timeout", "Name: " + sensor.Name + Environment.NewLine + "IP: " + sensor.IP + Environment.NewLine + "Online: " + sensor.IsOnline);
                         }
 
-                        if (s.HumidityLimit != 0 && s.Humidity > s.HumidityLimit)
-                        {
-                            Log.Warning("[" + s.IP + "] Humidity Threshold Reached!");
-
-                            Utils.SendEmail(config.Email, s.Recipients, "[" + s.Name + "] Sensor Alarm - Humidity Threshold Reached", "Name: " + s.Name + Environment.NewLine + "IP: " + s.IP + Environment.NewLine + "Temperature: " + s.Temperature
-                                + Environment.NewLine + "Humidity: " + s.Humidity);
-                        }
-
-                        if (s.TemperatureLimit != 0 && s.Temperature > s.TemperatureLimit)
-                        {
-                            Log.Warning("[" + s.IP + "] Temperature Threshold Reached!");
-
-                            Utils.SendEmail(config.Email, s.Recipients, "[" + s.Name + "] Sensor Alarm - Temperature Threshold Reached", "Name: " + s.Name + Environment.NewLine + "IP: " + s.IP + Environment.NewLine + "Temperature: " + s.Temperature
-                                + Environment.NewLine + "Humidity: " + s.Humidity);
-                        }
-
-                        // 5 DEGREES APART
-                        if ((s.Temperature > s.DewPoint ? s.Temperature - s.DewPoint : s.DewPoint - s.Temperature) <= 5)
-                        {
-                            Log.Warning("[" + s.IP + "] Condensation Warning!");
-
-                            // THE DIDN"T ASK FOR THIS, BUT HAVE A FEELING THEY WILL. DISABLED FOR NOW.
-                            //    Utils.SendEmail(config.Email, s.Recipients, "[" + s.Name + "] Sensor Alarm - Condensation Warning", "Name: " + s.Name + Environment.NewLine + "IP: " + s.IP + Environment.NewLine + "Temperature: " + s.Temperature
-                            //        + Environment.NewLine + "Humidity: " + s.Humidity + Environment.NewLine + "Dew Point: " + s.DewPoint);
-                        }
-                    }
-
-                    if (config.DataType.Type.Equals(DataType.DataTypes.ACCESS))
-                    {
-                        new Access(config).AddEntry(s);
-                    }
-                    else if (config.DataType.Type.Equals(DataType.DataTypes.MYSQL))
-                    {
-                        new MySQL(config).AddEntry(s);
+                        stopWatch.Stop();
+                        return;
                     }
                     else
                     {
-                        Log.Error("Invalid Database Type in config");
+                        sensor = ParseSensor(sensor);
+                    }
+                }
+
+                stopWatch.Stop();
+
+                if (wasOffline && sensor.IsOnline)
+                {
+                    Log.Information("[" + sensor.IP + "] Sensor online");
+
+                    Utils.SendEmail(config.Email, sensor.Recipients, "[" + sensor.Name + "] Sensor Alarm - Online", "Name: " + sensor.Name + Environment.NewLine + "IP: " + sensor.IP + Environment.NewLine + "Online: " + sensor.IsOnline);
+                }
+
+                if (sensor.IsOnline)
+                {
+                    if (sensor.HumidityWarning != 0 && sensor.Humidity > sensor.HumidityWarning && sensor.Humidity < sensor.HumidityLimit)
+                    {
+                        Log.Warning("[" + sensor.IP + "] Humidity Threshold Warning!");
+
+                        Utils.SendEmail(config.Email, sensor.Recipients, "[" + sensor.Name + "] Sensor Alarm - Humidity Threshold Warning", "Name: " + sensor.Name + Environment.NewLine + "IP: " + sensor.IP + Environment.NewLine + "Temperature: " + sensor.Temperature
+                            + Environment.NewLine + "Humidity: " + sensor.Humidity);
                     }
 
-                    s.Save();
-                });
-            }
+                    if (sensor.HumidityLimit != 0 && sensor.Humidity > sensor.HumidityLimit)
+                    {
+                        Log.Warning("[" + sensor.IP + "] Humidity Threshold Reached!");
+
+                        Utils.SendEmail(config.Email, sensor.Recipients, "[" + sensor.Name + "] Sensor Alarm - Humidity Threshold Reached", "Name: " + sensor.Name + Environment.NewLine + "IP: " + sensor.IP + Environment.NewLine + "Temperature: " + sensor.Temperature
+                            + Environment.NewLine + "Humidity: " + sensor.Humidity);
+                    }
+
+                    if (sensor.TemperatureLimit != 0 && sensor.Temperature > sensor.TemperatureLimit)
+                    {
+                        Log.Warning("[" + sensor.IP + "] Temperature Threshold Reached!");
+
+                        Utils.SendEmail(config.Email, sensor.Recipients, "[" + sensor.Name + "] Sensor Alarm - Temperature Threshold Reached", "Name: " + sensor.Name + Environment.NewLine + "IP: " + sensor.IP + Environment.NewLine + "Temperature: " + sensor.Temperature
+                            + Environment.NewLine + "Humidity: " + sensor.Humidity);
+                    }
+
+                    // 5 DEGREES APART
+                    if ((sensor.Temperature > sensor.DewPoint ? sensor.Temperature - sensor.DewPoint : sensor.DewPoint - sensor.Temperature) <= 5)
+                    {
+                        Log.Warning("[" + sensor.IP + "] Condensation Warning!");
+
+                        // THE DIDN"T ASK FOR THIS, BUT HAVE A FEELING THEY WILL. DISABLED FOR NOW.
+                        //    Utils.SendEmail(config.Email, s.Recipients, "[" + s.Name + "] Sensor Alarm - Condensation Warning", "Name: " + s.Name + Environment.NewLine + "IP: " + s.IP + Environment.NewLine + "Temperature: " + s.Temperature
+                        //        + Environment.NewLine + "Humidity: " + s.Humidity + Environment.NewLine + "Dew Point: " + s.DewPoint);
+                    }
+                }
+
+                if (config.DataType.Type.Equals(DataType.DataTypes.ACCESS))
+                {
+                    new Access(config).AddEntry(sensor);
+                }
+                else if (config.DataType.Type.Equals(DataType.DataTypes.MYSQL))
+                {
+                    new MySQL(config).AddEntry(sensor);
+                }
+                else
+                {
+                    Log.Error("Invalid Database Type in config");
+                }
+
+                sensor.Save();
+            });
         }
 
         private Sensor ParseSensor(Sensor sensor)
@@ -196,11 +197,10 @@ namespace OSWMonitorService
             {
                 htmlDoc = web.Load(url);
             }
-            catch { }
-
-            if(htmlDoc == null)
+            catch(WebException ex) 
             {
                 Log.Error("[" + sensor.IP + "] Unable to scrape data");
+                Log.Error(ex.Message);
                 sensor.IsOnline = false;
 
                 return sensor;

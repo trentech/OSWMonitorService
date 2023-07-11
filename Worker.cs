@@ -97,8 +97,6 @@ namespace OSWMonitorService
 
                 while (!sensor.IsOnline)
                 {
-                    Log.Warning("[" + sensor.IP + "] Sensor offline. Trying again...");
-
                     if (stopWatch.Elapsed.TotalSeconds >= 59)
                     {
                         Log.Error("[" + sensor.IP + "] Sensor offline. Timing out");
@@ -107,8 +105,9 @@ namespace OSWMonitorService
                         {
                             Utils.SendEmail(config.Email, sensor.Recipients, "[" + sensor.Name + "] Sensor Alarm - Connection Timeout", "Name: " + sensor.Name + Environment.NewLine + "IP: " + sensor.IP + Environment.NewLine + "Online: " + sensor.IsOnline);
                         }
-
+                        
                         stopWatch.Stop();
+                        sensor.Save();
                         return;
                     }
                     else
@@ -196,11 +195,11 @@ namespace OSWMonitorService
             try
             {
                 htmlDoc = web.Load(url);
+                sensor.IsOnline = true;
             }
             catch(WebException ex) 
             {
-                Log.Error("[" + sensor.IP + "] Unable to scrape data");
-                Log.Error(ex.Message);
+                Log.Error("[" + sensor.IP + "] " + ex.Message);
                 sensor.IsOnline = false;
 
                 return sensor;

@@ -48,8 +48,10 @@ namespace OSWMonitorService.JSON
             {
                 Directory.CreateDirectory(Path.Combine(PATH, "Sensors"));
 
-                List<string> recipients = new List<string>();
-                recipients.Add("example@mail.com");
+                List<string> recipients = new List<string>
+                {
+                    "example@mail.com"
+                };
 
                 Sensor sensor = new Sensor("Example", "192.168.1.1");
                 sensor.Recipients = recipients;

@@ -7,7 +7,7 @@ namespace OSWMonitorService.JSON
     {
         public enum DataTypes
         {
-            MYSQL, ACCESS
+            MYSQL, ACCESS, EXCEL
         }
 
         [JsonConverter(typeof(StringEnumConverter))]

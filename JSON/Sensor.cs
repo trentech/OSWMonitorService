@@ -1,5 +1,5 @@
 ﻿using Newtonsoft.Json;
-using static System.Environment;
+using Serilog;
 
 namespace OSWMonitorService.JSON
 {
@@ -40,6 +40,49 @@ namespace OSWMonitorService.JSON
         public void Save()
         {
             File.WriteAllText(Path.Combine(Config.PATH, @"Sensors\" + IP + ".json"), JsonConvert.SerializeObject(this, Formatting.Indented));
+        }
+
+
+        public static List<Sensor> All()
+        {
+            List<Sensor> list = new List<Sensor>();
+
+            string path = Path.Combine(Config.PATH, "Sensors");
+
+            foreach (var sensor in Directory.GetFiles(path, "*.json"))
+            {
+                try
+                {
+                    Sensor s = JsonConvert.DeserializeObject<Sensor>(File.ReadAllText(sensor));
+                    if (s != null) { list.Add(s); } else { Log.Error("Cannot deserialize sensor from JSON. It is null"); }
+                }
+                catch (Exception e)
+                {
+                    Log.Error("Cannot deserialize sensor from JSON", e);
+                }
+            }
+
+            return list;
+        }
+
+        public static Sensor Get(string IP)
+        {
+            string path = Path.Combine(Config.PATH, "Sensors");
+            string sensor = Path.Combine(path, IP + ".json");
+
+            if (File.Exists(sensor))
+            {
+                try
+                {
+                    return JsonConvert.DeserializeObject<Sensor>(File.ReadAllText(sensor));
+                }
+                catch (Exception e)
+                {
+                    Log.Error("Cannot deserialize sensor from JSON", e);
+                }
+            }
+
+            return null;
         }
     }
 }

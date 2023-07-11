@@ -61,7 +61,7 @@ namespace OSWMonitorService
 
                     config = Config.Get();
 
-                    foreach (Sensor sensor in Utils.GetSensors())
+                    foreach (Sensor sensor in Sensor.All())
                     {
                         if (sensor.Skip)
                         {
@@ -169,6 +169,10 @@ namespace OSWMonitorService
                 else if (config.DataType.Type.Equals(DataType.DataTypes.MYSQL))
                 {
                     new MySQL(config).AddEntry(sensor);
+                }
+                else if (config.DataType.Type.Equals(DataType.DataTypes.EXCEL))
+                {
+                    new Excel(config).AddEntry(sensor);
                 }
                 else
                 {

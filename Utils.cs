@@ -9,47 +9,6 @@ namespace OSWMonitorService
     internal class Utils
     {
 
-        public static List<Sensor> GetSensors()
-        {
-            List<Sensor> list = new List<Sensor>();
-
-            string path = Path.Combine(Config.PATH, "Sensors");
-
-            foreach (var sensor in Directory.GetFiles(path, "*.json"))
-            {
-                try
-                {
-                    Sensor s = JsonConvert.DeserializeObject<Sensor>(File.ReadAllText(sensor));
-                    if (s != null) { list.Add(s); } else { Log.Error("Cannot deserialize sensor from JSON. It is null"); } 
-                } catch (Exception e)
-                {
-                    Log.Error("Cannot deserialize sensor from JSON", e);
-                }
-            }
-
-            return list;
-        }
-
-        public static Sensor GetSensor(string IP)
-        {
-            string path = Path.Combine(Config.PATH, "Sensors");
-            string sensor = Path.Combine(path, IP + ".json");
-
-            if (File.Exists(sensor))
-            {
-                try
-                {
-                    return JsonConvert.DeserializeObject<Sensor>(File.ReadAllText(sensor));
-                }
-                catch (Exception e)
-                {
-                    Log.Error("Cannot deserialize sensor from JSON", e);
-                }
-            }
-
-            return null;
-        }
-
         public static void SendEmail(Mail mail, List<string> recipients, string subject, string body)
         {
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12 | SecurityProtocolType.Tls13;

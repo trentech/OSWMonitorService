@@ -5,10 +5,6 @@ using System.Net;
 using OSWMonitorService.DataTypes;
 using OSWMonitorService.JSON;
 using OSWMonitorService.Properties;
-using NPOI.SS.UserModel;
-using NPOI.XSSF.UserModel;
-using System.IO;
-using NPOI.SS.Formula.PTG;
 
 namespace OSWMonitorService
 {

@@ -2,7 +2,6 @@
 using Serilog;
 using OSWMonitorService.JSON;
 using System.Net;
-using Newtonsoft.Json;
 
 namespace OSWMonitorService
 {

@@ -58,13 +58,6 @@ namespace OSWMonitorService.DataTypes
                     command.Parameters.AddWithValue("@DateTime", GetDateTime(sensor.DateTime));
 
                     command.ExecuteNonQuery();
-
-                    command = new OleDbCommand("INSERT INTO [Names] ([IP], [Name]) VALUES (?,?)", db);
-
-                    command.Parameters.AddWithValue("@IP", tableName);
-                    command.Parameters.AddWithValue("@SensorName", sensor.Name);
-
-                    command.ExecuteNonQuery();
                 }
             }
             catch (Exception ex)
@@ -123,6 +116,13 @@ namespace OSWMonitorService.DataTypes
             }
 
             OleDbCommand command = new OleDbCommand("CREATE TABLE " + tableName + " ([Temperature] DOUBLE, [Humidity] DOUBLE, [Dew] DOUBLE, [Online] BIT, [DateTime] DateTime)", db);
+
+            command.ExecuteNonQuery();
+
+            command = new OleDbCommand("INSERT INTO [Names] ([IP], [Name]) VALUES (?,?)", db);
+
+            command.Parameters.AddWithValue("@IP", tableName);
+            command.Parameters.AddWithValue("@SensorName", sensor.Name);
 
             command.ExecuteNonQuery();
         }

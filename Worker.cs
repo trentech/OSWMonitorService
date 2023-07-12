@@ -5,6 +5,10 @@ using System.Net;
 using OSWMonitorService.DataTypes;
 using OSWMonitorService.JSON;
 using OSWMonitorService.Properties;
+using NPOI.SS.UserModel;
+using NPOI.XSSF.UserModel;
+using System.IO;
+using NPOI.SS.Formula.PTG;
 
 namespace OSWMonitorService
 {
@@ -18,11 +22,11 @@ namespace OSWMonitorService
 
             if (config.DataType.Type.Equals(DataType.DataTypes.ACCESS))
             {
-                string dbFile = Path.Combine(config.DataType.Path, config.DataType.Name) + ".accdb";
+                string path = Path.Combine(config.DataType.Path, config.DataType.Name) + ".accdb";
 
-                if (!File.Exists(dbFile))
+                if (!File.Exists(path))
                 {
-                    File.WriteAllBytes(dbFile, Resources.database);
+                    File.WriteAllBytes(path, Resources.database);
                 }
             }
 
@@ -169,10 +173,6 @@ namespace OSWMonitorService
                 else if (config.DataType.Type.Equals(DataType.DataTypes.MYSQL))
                 {
                     new MySQL(config).AddEntry(sensor);
-                }
-                else if (config.DataType.Type.Equals(DataType.DataTypes.EXCEL))
-                {
-                    new Excel(config).AddEntry(sensor);
                 }
                 else
                 {
